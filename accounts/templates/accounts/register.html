@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Register Company — Circular Waste Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="wrap" style="padding: 40px 24px;">
+    <div class="panel" style="max-width: 680px; margin: 0 auto; padding: 36px 32px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <span class="status-pill ok" style="margin-bottom: 8px;">Enterprise Verification Protocol</span>
+            <h1 style="font-size: var(--step-3); margin-top: 6px;">Register Your Company</h1>
+            <p style="color: var(--slate-500); font-size: 0.88rem; margin-top: 6px;">
+                Join the verified industrial byproducts &amp; circular waste exchange.
+            </p>
+        </div>
+
+        <div style="background: var(--emerald-tint); border: 1px solid #bbf7d0; border-radius: var(--radius); padding: 14px; margin-bottom: 24px; font-size: 0.84rem; color: var(--emerald-dark);">
+            <strong>Automated Permit Verification:</strong> Upload your company registration certificate or environmental permit (PDF/Image). Valid documentation triggers automated preliminary verification.
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger" style="margin-bottom: 20px;">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Username *</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.username.errors }}</div>{% endif %}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Corporate Email *</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.email.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Account Password *</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.password.errors }}</div>{% endif %}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Confirm Password *</label>
+                    {{ form.confirm_password }}
+                    {% if form.confirm_password.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.confirm_password.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top: 14px;">
+                <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Company Legal Name *</label>
+                {{ form.company_name }}
+                {% if form.company_name.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.company_name.errors }}</div>{% endif %}
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Registration / CIN Number *</label>
+                    {{ form.registration_number }}
+                    <span style="font-size:0.7rem; color:var(--slate-500);">Example: U25190GJ2021PTC120444 or REG-1029</span>
+                    {% if form.registration_number.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.registration_number.errors }}</div>{% endif %}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">GSTIN (15 characters) *</label>
+                    {{ form.gstin }}
+                    <span style="font-size:0.7rem; color:var(--slate-500);">Format: 24AAACG1234F1Z5</span>
+                    {% if form.gstin.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.gstin.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Authorized Signatory *</label>
+                    {{ form.authorized_person }}
+                    {% if form.authorized_person.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.authorized_person.errors }}</div>{% endif %}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Phone Contact (10-15 digits) *</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.phone.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Enterprise Role *</label>
+                    {{ form.user_type }}
+                    {% if form.user_type.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.user_type.errors }}</div>{% endif %}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Environmental Permit / License Document</label>
+                    {{ form.permit_document }}
+                    <span style="font-size:0.7rem; color:var(--slate-500);">Upload PDF or Image proof (Max 10MB)</span>
+                    {% if form.permit_document.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.permit_document.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top: 14px;">
+                <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Operating Facility / Registered Address *</label>
+                {{ form.address }}
+                {% if form.address.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.address.errors }}</div>{% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 24px; padding: 13px; font-size: 0.95rem;">
+                Submit Company Registration
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 20px; font-size: 0.85rem; color: var(--slate-500);">
+            Already registered? <a href="{% url 'login' %}" style="color: var(--emerald); font-weight: 600;">Sign in to your account</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    input[type="text"], input[type="email"], input[type="password"], input[type="file"], select, textarea {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.85rem;
+        background: #fff;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    input:focus, select:focus, textarea:focus {
+        outline: 2px solid var(--emerald);
+        border-color: var(--emerald);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Edit Waste Stream{% else %}List New Byproduct Waste Stream{% endif %} — Circular Waste Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">{% if is_edit %}Edit Listed Byproduct{% else %}List Waste Stream{% endif %}</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'dashboard' %}">Supplier Dashboard</a> / {% if is_edit %}Edit Stream #{{ listing.batch_id }}{% else %}New Stream Entry{% endif %}
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm">&larr; Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px;">
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+        
+        <!-- Main Form -->
+        <div class="panel">
+            <h3>Material Stream Specifications &amp; Quality Guarantee</h3>
+            
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger" style="margin-bottom: 16px;">
+                        {% for err in form.non_field_errors %}
+                            <div>&bull; {{ err }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Material Stream Name *</label>
+                    {{ form.material_name }}
+                    {% if form.material_name.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.material_name.errors }}</div>{% endif %}
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Detailed Stream Description *</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.description.errors }}</div>{% endif %}
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Category Stream *</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.category.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Available Volume *</label>
+                        {{ form.volume_tons }}
+                        {% if form.volume_tons.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.volume_tons.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Quantity Unit *</label>
+                        {{ form.quantity_unit }}
+                        {% if form.quantity_unit.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.quantity_unit.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Purity Rating (%) *</label>
+                        {{ form.purity_percent }}
+                        <span style="font-size:0.72rem; color:var(--slate-500);">Measured lab purity percentage (e.g. 90%)</span>
+                        {% if form.purity_percent.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.purity_percent.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Physical Condition *</label>
+                        {{ form.condition }}
+                        {% if form.condition.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.condition.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Offering Price Per Unit (₹) *</label>
+                        {{ form.price_per_ton }}
+                        {% if form.price_per_ton.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.price_per_ton.errors }}</div>{% endif %}
+                        <button type="button" id="btn-use-recommended" class="btn btn-outline btn-sm" style="margin-top:6px; width:100%; border-color:var(--emerald); color:var(--emerald-dark); font-size:0.75rem;">
+                            &check; Use Recommended Price
+                        </button>
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Kerala Storage Facility / Hub *</label>
+                        {{ form.location }}
+                        {% if form.location.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.location.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Quality & Batch Integrity Verification -->
+                <h4 style="margin: 24px 0 12px; border-top: 1px solid var(--slate-200); padding-top: 16px; font-size: 0.95rem; color: var(--emerald-dark);">
+                    🛡️ Quality Assurance, Lab Testing &amp; Certificate Parsing
+                </h4>
+                <div style="background: var(--emerald-tint); border: 1px solid #bbf7d0; border-radius: var(--radius); padding: 12px; margin-bottom: 16px; font-size: 0.78rem; color: #065f46;">
+                    <strong>Anti-Impurity Guarantee:</strong> To protect buyers from irregular or impure bulk lots, attach accredited lab certifications. You can click <em>"Auto-Fill from Certificate"</em> to let AI parse your assay suggestions.
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Quality Grade Certification</label>
+                        {{ form.quality_grade }}
+                        {% if form.quality_grade.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.quality_grade.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Upload Lab Certificate / Assay (PDF/IMG)</label>
+                        {{ form.quality_certificate }}
+                        {% if form.quality_certificate.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.quality_certificate.errors }}</div>{% endif %}
+                        <button type="button" id="btn-parse-cert" class="btn btn-outline btn-sm" style="margin-top:6px; width:100%; border-color:#2563eb; color:#1d4ed8; font-size:0.75rem; background:#eff6ff;">
+                            ✨ Auto-Fill Suggestions from Certificate
+                        </button>
+                        <div id="cert-parse-status" style="font-size:0.75rem; margin-top:4px; display:none;"></div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Sampling &amp; Homogeneity Protocol</label>
+                    {{ form.sampling_protocol }}
+                    <span style="font-size:0.72rem; color:var(--slate-500);">Standard: ASTM D6323 Multi-point composite sampling across volume</span>
+                    {% if form.sampling_protocol.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.sampling_protocol.errors }}</div>{% endif %}
+                </div>
+
+                <!-- Compulsory Image & Multi-Angle Gallery -->
+                <h4 style="margin: 24px 0 12px; border-top: 1px solid var(--slate-200); padding-top: 16px; font-size: 0.95rem; color: var(--slate-900);">
+                    📸 Material Images (Compulsory Primary + Multiple Angles)
+                </h4>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Primary Material Image * (Compulsory)</label>
+                    {{ form.image }}
+                    <span style="font-size:0.72rem; color:var(--slate-500);">Upload high-resolution authentic photo of the waste stream (.jpg, .png, .webp). Mismatched images will be flagged by automated check.</span>
+                    {% if form.image.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.image.errors }}</div>{% endif %}
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Additional Multi-Angle Photos (Amazon/Flipkart Style Gallery)</label>
+                    <input type="file" name="additional_images" multiple accept="image/*" class="form-control">
+                    <span style="font-size:0.72rem; color:var(--slate-500);">Select 1 or more extra pictures (e.g. close-up texture, packaging, storage pile, scale weights).</span>
+                </div>
+
+                <h4 style="margin: 24px 0 12px; border-top: 1px solid var(--slate-200); padding-top: 16px; font-size: 0.95rem;">
+                    Industrial Logistics &amp; Physical Specifications
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display:block; font-size:0.78rem; margin-bottom:4px;">Min Order Qty (MOQ Tons)</label>
+                        {{ form.moq_tons }}
+                        {% if form.moq_tons.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.moq_tons.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.78rem; margin-bottom:4px;">Lead Time (Days)</label>
+                        {{ form.lead_time_days }}
+                        {% if form.lead_time_days.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.lead_time_days.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.78rem; margin-bottom:4px;">Packaging Type</label>
+                        {{ form.packaging_type }}
+                        {% if form.packaging_type.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.packaging_type.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display:block; font-size:0.78rem; margin-bottom:4px;">Moisture Content (%)</label>
+                        {{ form.moisture_percent }}
+                        {% if form.moisture_percent.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.moisture_percent.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.78rem; margin-bottom:4px;">Contamination (%)</label>
+                        {{ form.contamination_percent }}
+                        {% if form.contamination_percent.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.contamination_percent.errors }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.78rem; margin-bottom:4px;">Particle Size</label>
+                        {{ form.particle_size }}
+                        {% if form.particle_size.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.particle_size.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; font-size:0.78rem; margin-bottom:4px;">Compliance / KSPCB Manifest ID</label>
+                    {{ form.compliance_id }}
+                    {% if form.compliance_id.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.compliance_id.errors }}</div>{% endif %}
+                </div>
+
+                <div style="background: var(--amber-tint); border: 1px solid #fde68a; border-radius: var(--radius); padding: 12px; margin-bottom: 20px; font-size: 0.8rem; color: #92400e;">
+                    ⏳ <strong>Admin Review Protocol:</strong> New material streams are initially set to <code>Pending</code> status. Once administrators review the lab certificate and consistency check, your stream will be approved and published publicly on the marketplace.
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="padding: 12px 24px; font-size: 0.9rem;">
+                    {% if is_edit %}Save Updates{% else %}Submit Waste Stream for Admin Review{% endif %}
+                </button>
+            </form>
+        </div>
+
+        <!-- Dynamic Recommendation Sidebar -->
+        <div>
+            <div class="panel" style="background: #f8fafc; border-left: 4px solid var(--emerald);">
+                <h3 style="color: var(--emerald-dark); display: flex; align-items: center; gap: 6px;">
+                    <span>Dynamic Price Engine</span>
+                </h3>
+                <p style="font-size: 0.8rem; color: var(--slate-500); margin-bottom: 16px;">
+                    Market rates auto-computed based on standard benchmark, purity, and volume scale factors.
+                </p>
+
+                <div style="padding: 12px; background: #fff; border: 1px solid var(--slate-200); border-radius: var(--radius); margin-bottom: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--slate-500);">Base Standard Rate</div>
+                    <div id="disp-std-rate" class="mono" style="font-size: 1.2rem; font-weight: 700; color: var(--slate-800);">
+                        ₹{{ standard_rate|floatformat:2 }} / ton
+                    </div>
+                </div>
+
+                <div style="padding: 12px; background: var(--emerald-tint); border: 1px solid #bbf7d0; border-radius: var(--radius); margin-bottom: 16px;">
+                    <div style="font-size: 0.75rem; color: var(--emerald-dark); font-weight: 600;">Recommended Selling Price</div>
+                    <div id="disp-rec-rate" class="mono" style="font-size: 1.5rem; font-weight: 700; color: var(--emerald-dark);">
+                        ₹{{ recommended_price|floatformat:2 }} / ton
+                    </div>
+                    <div id="disp-formula" style="font-size: 0.7rem; color: var(--slate-500); margin-top: 4px;">
+                        Standard Rate &times; (Purity / 100) &times; Volume Scale
+                    </div>
+                </div>
+
+                <div style="font-size: 0.78rem; color: var(--slate-500); line-height: 1.4;">
+                    <strong>Seller Flexibility:</strong> You may adjust the final offering rate freely to match your facility's operational targets.
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .form-control {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.85rem;
+        background: #fff;
+    }
+    .form-control:focus {
+        outline: 2px solid var(--emerald);
+        border-color: var(--emerald);
+    }
+</style>
+
+<script>
+    // Live update of price recommendation via AJAX
+    function updateRecommendation() {
+        const cat = document.getElementById('id_category').value;
+        const purity = document.getElementById('id_purity_percent').value || 90;
+        const volume = document.getElementById('id_volume_tons').value || 100;
+
+        fetch(`/api/calculate-rate/?category=${cat}&purity=${purity}&volume=${volume}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('disp-std-rate').innerText = '₹' + data.standard_rate.toFixed(2) + ' / ton';
+                document.getElementById('disp-rec-rate').innerText = '₹' + data.recommended_rate.toFixed(2) + ' / ton';
+                window.currentRecommendedPrice = data.recommended_rate;
+            });
+    }
+
+    document.getElementById('id_category').addEventListener('change', updateRecommendation);
+    document.getElementById('id_purity_percent').addEventListener('input', updateRecommendation);
+    document.getElementById('id_volume_tons').addEventListener('input', updateRecommendation);
+
+    document.getElementById('btn-use-recommended').addEventListener('click', function() {
+        if (window.currentRecommendedPrice) {
+            document.getElementById('id_price_per_ton').value = window.currentRecommendedPrice.toFixed(2);
+        } else {
+            const currentDisp = document.getElementById('disp-rec-rate').innerText.replace(/[₹/ton,\s]/g, '');
+            if (currentDisp) {
+                document.getElementById('id_price_per_ton').value = parseFloat(currentDisp).toFixed(2);
+            }
+        }
+    });
+
+    // Auto-fill from Certificate via AJAX
+    const parseCertBtn = document.getElementById('btn-parse-cert');
+    if (parseCertBtn) {
+        parseCertBtn.addEventListener('click', function() {
+            const certInput = document.getElementById('id_quality_certificate');
+            const statusDiv = document.getElementById('cert-parse-status');
+
+            if (!certInput || !certInput.files || certInput.files.length === 0) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.color = 'var(--danger)';
+                statusDiv.innerHTML = '⚠️ Please select a lab certificate file first.';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('certificate', certInput.files[0]);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+            statusDiv.style.display = 'block';
+            statusDiv.style.color = '#1d4ed8';
+            statusDiv.innerHTML = '⏳ Analyzing lab assay data and extracting quality metrics...';
+
+            fetch('/api/extract-cert/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success' && res.data) {
+                    const d = res.data;
+                    if (d.suggested_purity && document.getElementById('id_purity_percent')) {
+                        document.getElementById('id_purity_percent').value = d.suggested_purity;
+                    }
+                    if (d.suggested_grade && document.getElementById('id_quality_grade')) {
+                        document.getElementById('id_quality_grade').value = d.suggested_grade;
+                    }
+                    if (d.suggested_category && document.getElementById('id_category')) {
+                        document.getElementById('id_category').value = d.suggested_category;
+                    }
+                    if (d.material_name && document.getElementById('id_material_name') && !document.getElementById('id_material_name').value) {
+                        document.getElementById('id_material_name').value = d.material_name;
+                    }
+                    if (d.compliance_id && document.getElementById('id_compliance_id')) {
+                        document.getElementById('id_compliance_id').value = d.compliance_id;
+                    }
+                    statusDiv.style.color = 'var(--emerald-dark)';
+                    statusDiv.innerHTML = `✅ Successfully extracted! Purity: <strong>${d.suggested_purity}%</strong>, Grade: <strong>${d.suggested_grade}</strong>, Accreditation: <strong>${d.lab_name}</strong>.`;
+                    updateRecommendation();
+                } else {
+                    statusDiv.style.color = 'var(--danger)';
+                    statusDiv.innerHTML = '⚠️ Could not extract data. ' + (res.message || '');
+                }
+            })
+            .catch(err => {
+                statusDiv.style.color = 'var(--danger)';
+                statusDiv.innerHTML = '⚠️ Error contacting certificate parsing engine.';
+            });
+        });
+    }
+</script>
+{% endblock %}

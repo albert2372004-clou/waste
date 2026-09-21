@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Certificate — Certificate Vault{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Upload to Certificate Vault</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'dashboard' %}">Supplier Dashboard</a> / Certificate Compliance Vault
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm">&larr; Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 20px;">
+    <div class="panel" style="max-width: 580px; margin: 0 auto;">
+        <h3>Add Compliance Certificate or Lab Test Sheet</h3>
+        <p style="font-size: 0.82rem; color: var(--slate-500); margin-bottom: 20px;">
+            Verified certificates enhance your supplier trust score and allow buyers to inspect purity compliance before booking aggregated orders.
+        </p>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div style="margin-bottom: 14px;">
+                <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:4px;">Certificate Title *</label>
+                {{ form.certificate_name }}
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:4px;">Certificate Type *</label>
+                    {{ form.certificate_type }}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:4px;">Covered Material *</label>
+                    {{ form.material }}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:4px;">Issue Date *</label>
+                    {{ form.issue_date }}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:4px;">Expiry Date *</label>
+                    {{ form.expiry_date }}
+                </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:4px;">Document File (PDF or Image)</label>
+                {{ form.document }}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 11px;">
+                Upload Certificate to Vault
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-control {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}

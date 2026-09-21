@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}Circular Waste Intelligence System — Industrial Byproduct Marketplace{% endblock %}
+
+{% block content %}
+<!-- ============ WELCOME & ZONE TICKER ============ -->
+<div style="background: #090d16; color: #94a3b8; font-size: 0.78rem; border-bottom: 1px solid #1f293d; padding: 6px 0;">
+    <div class="wrap" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+        <div>
+            {% if request.user.is_authenticated and request.user.company %}
+                <span style="color: #34d399; font-weight: 600;">👋 Welcome, {{ request.user.company.company_name }}!</span> 
+                {% if request.user.company.user_type == 'buyer' %}
+                    <span style="color: #cbd5e1;">(Authorized Feedstock Buyer Enterprise)</span>
+                {% elif request.user.company.user_type == 'supplier' %}
+                    <span style="color: #cbd5e1;">(Authorized Waste Generator / Supplier)</span>
+                {% elif request.user.company.user_type == 'both' %}
+                    <span style="color: #cbd5e1;">(Dual-Role Enterprise: Buyer &amp; Supplier)</span>
+                {% endif %}
+            {% else %}
+                <span>👋 Welcome to <strong>Anti Gravity: Kerala Circular Waste Intelligence Hub</strong></span>
+            {% endif %}
+        </div>
+        <div style="display: flex; gap: 14px; font-family: var(--font-mono); font-size: 0.72rem;">
+            <span style="color: #38bdf8;">📍 Corridor: Kochi &harr; Palakkad (NH 544)</span>
+            <span style="color: #fbbf24;">⚡ Real-Time Weighbridge Verification Active</span>
+        </div>
+    </div>
+</div>
+
+<!-- ============ HERO BANNER ============ -->
+<section style="background: linear-gradient(135deg, #0d1520 0%, #111827 55%, #0f2a24 100%); color: #fff; padding: 44px 0 34px; position: relative; overflow: hidden;">
+    <div class="wrap" style="display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; position: relative; z-index: 2;">
+        <div style="max-width: 560px;">
+            <div style="display: inline-block; background: rgba(5,150,105,0.2); border: 1px solid rgba(52,211,153,0.4); color: #34d399; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; margin-bottom: 12px; font-family: var(--font-mono);">
+                CIRCULAR ECONOMY &bull; KERALA INDUSTRIAL CORRIDOR
+            </div>
+            <h1 style="color: #fff; font-size: var(--step-4); line-height: 1.15;">
+                One factory's byproduct is another's feedstock.
+            </h1>
+            <p style="color: var(--slate-300); margin-top: 10px; font-size: 0.95rem; line-height: 1.5;">
+                Connect industrial by-products with verified buyer enterprises across Kerala. Combine supply streams across certified factories and eliminate landfill waste.
+            </p>
+
+            <!-- Adaptive Action Buttons based on User Role -->
+            <div style="display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap;">
+                {% if request.user.is_authenticated and request.user.company and not request.user.company.can_sell %}
+                    <!-- Pure Buyer Mode: No "List Stream" button! -->
+                    <a href="#catalog" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.88rem;">
+                        Browse Secondary Feedstock Catalog &darr;
+                    </a>
+                    <a href="{% url 'buyer_orders' %}" class="btn btn-amber" style="padding: 10px 18px; font-size: 0.88rem;">
+                        📦 Track My Live Consignments
+                    </a>
+                {% else %}
+                    <!-- Supplier, Dual Enterprise, or Unauthenticated Visitor -->
+                    <a href="{% url 'listing_create' %}" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.88rem;">
+                        + List Industrial Byproduct Stream
+                    </a>
+                    <a href="#catalog" class="btn btn-outline" style="color:#fff; border-color:#475569; padding: 10px 18px; font-size: 0.88rem;">
+                        Find Feedstock Materials &darr;
+                    </a>
+                    {% if request.user.is_authenticated and request.user.company.can_buy %}
+                        <a href="{% url 'buyer_orders' %}" class="btn btn-amber" style="padding: 10px 14px; font-size: 0.82rem;">
+                            📦 Live Orders
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display: flex; border: 1px solid #2d3a52; border-radius: var(--radius); overflow: hidden; background: #1a2436; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <div style="padding: 16px 22px; border-right: 1px solid #2d3a52; min-width: 140px;">
+                <div class="mono" style="font-size: 1.5rem; font-weight: 700; color: var(--emerald);">{{ total_diverted|default:14200 }} t</div>
+                <div style="font-size: 0.72rem; color: var(--slate-300); margin-top: 4px;">Tons Diverted</div>
+            </div>
+            <div style="padding: 16px 22px; border-right: 1px solid #2d3a52; min-width: 140px;">
+                <div class="mono" style="font-size: 1.5rem; font-weight: 700; color: var(--emerald);">{{ estimated_credits|default:3400 }}</div>
+                <div style="font-size: 0.72rem; color: var(--slate-300); margin-top: 4px;">Carbon Credits Generated</div>
+            </div>
+            <div style="padding: 16px 22px; min-width: 140px;">
+                <div class="mono" style="font-size: 1.5rem; font-weight: 700; color: var(--amber);">Active</div>
+                <div style="font-size: 0.72rem; color: var(--slate-300); margin-top: 4px;">Multi-Factory Aggregation</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ INDUSTRIAL SYMBIOSIS STRIP ============ -->
+<section style="background: var(--emerald-tint); border-top: 1px solid #d1fae5; border-bottom: 1px solid #d1fae5; padding: 26px 0;">
+    <div class="wrap">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <h2 style="font-size: var(--step-2);">Industrial Symbiosis Exchange Matches</h2>
+                <p style="color: var(--slate-500); font-size: 0.85rem;">Cross-referenced circular byproduct flows between unrelated manufacturing sectors.</p>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px;">
+            <div class="panel" style="flex: 0 0 280px; padding: 16px; border: 1px solid #bbf7d0;">
+                <div class="mono" style="font-size: 0.78rem; font-weight: 700; color: var(--slate-800);">
+                    TEXTILE SCRAPS <span style="color: var(--emerald);">&rarr;</span> ACOUSTIC INSULATION
+                </div>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--slate-500);">
+                    Automotive interior plants source cotton shreds for acoustic thermal barriers.
+                </p>
+                <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--emerald-dark); font-weight: 600;">
+                    <span>6 Buyers matched</span><span>High Demand</span>
+                </div>
+            </div>
+
+            <div class="panel" style="flex: 0 0 280px; padding: 16px; border: 1px solid #bbf7d0;">
+                <div class="mono" style="font-size: 0.78rem; font-weight: 700; color: var(--slate-800);">
+                    COCONUT SHELLS <span style="color: var(--emerald);">&rarr;</span> ACTIVATED CARBON
+                </div>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--slate-500);">
+                    Water purification and chemical air filtration convert shell char to activated media.
+                </p>
+                <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--emerald-dark); font-weight: 600;">
+                    <span>4 Buyers matched</span><span>Top Grade</span>
+                </div>
+            </div>
+
+            <div class="panel" style="flex: 0 0 280px; padding: 16px; border: 1px solid #bbf7d0;">
+                <div class="mono" style="font-size: 0.78rem; font-weight: 700; color: var(--slate-800);">
+                    TYRE CRUMB RUBBER <span style="color: var(--emerald);">&rarr;</span> PAVEMENT ASPHALT
+                </div>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--slate-500);">
+                    Infrastructure contractors blend crumb rubber into bitumen for flexible roadway surfacing.
+                </p>
+                <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--emerald-dark); font-weight: 600;">
+                    <span>9 Buyers matched</span><span>Active Corridor</span>
+                </div>
+            </div>
+
+            <div class="panel" style="flex: 0 0 280px; padding: 16px; border: 1px solid #bbf7d0;">
+                <div class="mono" style="font-size: 0.78rem; font-weight: 700; color: var(--slate-800);">
+                    FISH SCALES <span style="color: var(--emerald);">&rarr;</span> BIOMEDICAL COLLAGEN
+                </div>
+                <p style="margin-top: 8px; font-size: 0.8rem; color: var(--slate-500);">
+                    Marine processing byproduct refined for pharmaceutical collagen peptides.
+                </p>
+                <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--emerald-dark); font-weight: 600;">
+                    <span>3 Buyers matched</span><span>Premium Value</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ MAIN: FILTERS + CATALOG ============ -->
+<div id="catalog" class="wrap" style="padding: 32px 24px 64px; display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: start;">
+    
+    <!-- Filter Sidebar -->
+    <aside class="panel" style="position: sticky; top: 75px;">
+        <form method="GET" action="{% url 'index' %}">
+            <h3 style="font-size: 0.75rem; letter-spacing: 0.04em; color: var(--slate-500); text-transform: uppercase; margin-bottom: 14px;">
+                Filter Material Streams
+            </h3>
+
+            <!-- Search Field -->
+            <div style="margin-bottom: 18px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--slate-700); display: block; margin-bottom: 4px;">Keywords</label>
+                <input type="text" name="q" value="{{ q }}" placeholder="Material, batch, location" style="width: 100%; padding: 7px 10px; border: 1px solid var(--slate-300); border-radius: var(--radius); font-size: 0.82rem;">
+            </div>
+
+            <!-- Material Stream Type -->
+            <div style="margin-bottom: 18px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--slate-700); display: block; margin-bottom: 6px;">Material Stream</label>
+                <select name="category" style="width: 100%; padding: 8px; border: 1px solid var(--slate-300); border-radius: var(--radius); font-size: 0.82rem;">
+                    <option value="">All Streams</option>
+                    <option value="rubber" {% if current_category == 'rubber' %}selected{% endif %}>Scrap Rubber (Kottayam)</option>
+                    <option value="textile" {% if current_category == 'textile' %}selected{% endif %}>Textile Remnants (Kochi/Kannur)</option>
+                    <option value="coconut" {% if current_category == 'coconut' %}selected{% endif %}>Coconut Shells & Coir (Alappuzha)</option>
+                    <option value="plastic" {% if current_category == 'plastic' %}selected{% endif %}>Industrial Plastics (Palakkad)</option>
+                    <option value="fish" {% if current_category == 'fish' %}selected{% endif %}>Fish Scales (Munambam)</option>
+                </select>
+            </div>
+
+            <!-- Quality Grade Filter -->
+            <div style="margin-bottom: 18px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--slate-700); display: block; margin-bottom: 6px;">Quality Grade Certification</label>
+                <select name="quality_grade" style="width: 100%; padding: 8px; border: 1px solid var(--slate-300); border-radius: var(--radius); font-size: 0.82rem;">
+                    <option value="">All Verified Grades</option>
+                    <option value="grade_a" {% if current_quality_grade == 'grade_a' %}selected{% endif %}>Grade A (Lab Certified &gt;90% Purity)</option>
+                    <option value="grade_b" {% if current_quality_grade == 'grade_b' %}selected{% endif %}>Grade B (Industrial Standard 75-89%)</option>
+                    <option value="grade_c" {% if current_quality_grade == 'grade_c' %}selected{% endif %}>Grade C (Refinery/Raw Stream &lt;75%)</option>
+                </select>
+            </div>
+
+            <!-- Minimum Volume Slider -->
+            <div style="margin-bottom: 18px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--slate-700); display: block; margin-bottom: 4px;">
+                    Minimum Supply Volume: <span id="vol-val" class="mono" style="color: var(--emerald-dark);">{{ min_volume }}</span> t
+                </label>
+                <input type="range" name="min_volume" min="0" max="500" value="{{ min_volume }}" style="width: 100%; accent-color: var(--emerald);" oninput="document.getElementById('vol-val').innerText = this.value">
+            </div>
+
+            <!-- Minimum Purity Slider -->
+            <div style="margin-bottom: 18px;">
+                <label style="font-size: 0.78rem; font-weight: 600; color: var(--slate-700); display: block; margin-bottom: 4px;">
+                    Minimum Purity: <span id="purity-val" class="mono" style="color: var(--emerald-dark);">{{ min_purity }}</span>%
+                </label>
+                <input type="range" name="min_purity" min="50" max="100" value="{{ min_purity }}" style="width: 100%; accent-color: var(--emerald);" oninput="document.getElementById('purity-val').innerText = this.value">
+            </div>
+
+            <!-- Verification Only Checkbox -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--slate-800); cursor: pointer;">
+                    <input type="checkbox" name="verified_only" value="1" {% if request.GET.verified_only %}checked{% endif %} style="accent-color: var(--emerald);">
+                    Permit Verified Only
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+            <a href="{% url 'index' %}" class="btn btn-outline btn-block btn-sm" style="margin-top: 6px;">Reset</a>
+        </form>
+    </aside>
+
+    <!-- Catalog Results Grid -->
+    <section>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <h2 style="font-size: var(--step-2);">Kerala Circular Byproduct Streams</h2>
+                <span style="font-size: 0.78rem; color: var(--slate-500);">Open Access &bull; All verified streams visible without registration</span>
+            </div>
+            <span style="font-size: 0.82rem; color: var(--slate-500); background: #ffffff; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--slate-200);">
+                <strong>{{ total_listings_count }}</strong> Active Streams in Corridor
+            </span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px;">
+            {% for item in listings %}
+            <article class="panel product-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+                <!-- Header / Media simulation with real image or badge -->
+                {% if item.image %}
+                    <div style="aspect-ratio: 16/9; background: #0f172a; position: relative; overflow: hidden;">
+                        <img src="{{ item.image.url }}" alt="{{ item.material_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <span class="mono" style="position: absolute; bottom: 8px; left: 8px; font-size: 0.72rem; color: #fff; background: rgba(15,23,42,0.85); padding: 3px 8px; border-radius: var(--radius); backdrop-filter: blur(4px);">
+                            Batch #{{ item.batch_id }}
+                        </span>
+                        <div style="position: absolute; top: 10px; right: 10px; background: var(--amber); color: #1f1300; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; padding: 3px 7px; border-radius: var(--radius);">
+                            {{ item.trust_score }}% Reliable
+                        </div>
+                    </div>
+                {% else %}
+                    <div style="aspect-ratio: 16/9; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;">
+                        <div style="font-size: 2rem; margin-bottom: 4px;">
+                            {% if item.category == 'rubber' %}🛞{% elif item.category == 'textile' %}🧵{% elif item.category == 'coconut' %}🥥{% elif item.category == 'plastic' %}🧪{% elif item.category == 'fish' %}🐟{% else %}📦{% endif %}
+                        </div>
+                        <span class="mono" style="font-size: 0.72rem; color: #cbd5e1; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.15);">
+                            Batch #{{ item.batch_id }}
+                        </span>
+                        <div style="position: absolute; top: 10px; right: 10px; background: var(--amber); color: #1f1300; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; padding: 3px 7px; border-radius: var(--radius);">
+                            {{ item.trust_score }}% Reliable
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Card Body -->
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <span class="tag" style="text-transform: capitalize; font-weight: 600;">{{ item.get_category_display }}</span>
+                        <span class="mono" style="font-size: 0.72rem; color: var(--emerald-dark); font-weight: 600;">{{ item.match_label }}</span>
+                    </div>
+
+                    <h3 style="font-size: 1.05rem; line-height: 1.25; margin-top: 4px;">
+                        <a href="{% url 'product_detail' pk=item.pk %}" style="color: var(--slate-950); text-decoration: none;">
+                            {{ item.material_name }}
+                        </a>
+                    </h3>
+
+                    <div style="font-size: 0.78rem; color: var(--slate-500); display: flex; justify-content: space-between;">
+                        <span>🏢 {{ item.supplier.company_name }}</span>
+                        <span>📍 {{ item.location }}</span>
+                    </div>
+
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                        {% if item.quality_grade %}
+                            <span class="tag" style="background:#eff6ff; color:#1e40af; border-color:#bfdbfe; font-weight:600;">
+                                🏅 {{ item.get_quality_grade_display }}
+                            </span>
+                        {% endif %}
+                        {% if item.quality_certificate %}
+                            <span class="tag verified" title="Lab Test Report Attached">&check; Lab Certified</span>
+                        {% endif %}
+                        <span class="tag">{{ item.purity_percent }}% Purity</span>
+                        <span class="tag">{{ item.volume_tons }} tons available</span>
+                    </div>
+
+                    <div style="margin-top: auto; padding-top: 12px; border-top: 1px dashed var(--slate-200); display: flex; justify-content: space-between; align-items: baseline;">
+                        <div>
+                            <span class="mono" style="font-size: 1.2rem; font-weight: 700; color: var(--slate-950);">₹{{ item.price_per_ton|floatformat:0 }}</span>
+                            <span style="font-size: 0.72rem; color: var(--slate-500);">/ ton</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            {% if not request.user.is_authenticated or not request.user.company or request.user.company.can_buy and request.session.active_mode != 'supplier' %}
+                                {% if request.user.company.user_type != 'supplier' %}
+                                <a href="{% url 'cart_add' pk=item.pk %}" class="btn btn-outline btn-sm" title="Add to Multi-Supplier Cart">
+                                    + Cart
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                            <a href="{% url 'product_detail' pk=item.pk %}" class="btn btn-primary btn-sm">
+                                View Specs &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #fff; border: 1px solid var(--slate-200); border-radius: var(--radius);">
+                <p style="color: var(--slate-500); font-size: 1rem;">No industrial byproduct streams match your filter parameters in Kerala Industrial Corridor.</p>
+                <a href="{% url 'index' %}" class="btn btn-primary" style="margin-top: 12px;">Reset All Filters</a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+
+{% endblock %}

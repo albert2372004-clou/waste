@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}500 - System Error | Circular Waste Intelligence System{% endblock %}
+
+{% block content %}
+<div class="wrap" style="padding: 60px 24px; text-align: center;">
+    <div class="panel" style="max-width: 540px; margin: 0 auto; padding: 40px 30px;">
+        <span class="status-pill block" style="font-size: 0.85rem; padding: 6px 14px; margin-bottom: 16px;">Internal Error (500)</span>
+        <h1 style="font-size: var(--step-3); margin-top: 12px; margin-bottom: 8px;">Exchange Service Error</h1>
+        <p style="color: var(--slate-500); font-size: 0.9rem; margin-bottom: 24px;">
+            An unexpected error occurred while processing your material exchange transaction. Our platform engineers have been notified.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <a href="{% url 'index' %}" class="btn btn-primary">Return to Marketplace</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Enterprise Admin Dashboard — Circular Waste Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Circular Platform Admin Control Hub</h1>
+            <div class="breadcrumb">
+                System Administration &bull; Platform Metrics, Standard Rates &amp; Aggregation Streams
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <a href="{% url 'verification_panel' %}" class="btn btn-amber btn-sm">Permit Verification Hub ({{ pending_companies }})</a>
+            <a href="/admin/" class="btn btn-outline btn-sm">Django Site Admin &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px;">
+
+    <!-- Top Platform KPI Cards -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+        <div class="panel" style="padding: 16px;">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--slate-950);">
+                {{ total_companies }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Registered Enterprises</div>
+            <div style="font-size: 0.72rem; color: var(--emerald-dark); margin-top: 2px;">
+                {{ verified_companies }} Verified &bull; {{ pending_companies }} Pending
+            </div>
+        </div>
+
+        <div class="panel" style="padding: 16px; border-left: 4px solid var(--emerald);">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--emerald-dark);">
+                {{ active_listings }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Active Waste Streams</div>
+            <div style="font-size: 0.72rem; color: var(--slate-500); margin-top: 2px;">{{ total_volume }} Total Inventory</div>
+        </div>
+
+        <div class="panel" style="padding: 16px; border-left: 4px solid var(--amber);">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--amber);">
+                {{ procurement_requests_count }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Procurement Requisitions</div>
+            <div style="font-size: 0.72rem; color: var(--slate-500); margin-top: 2px;">Multi-Supplier Aggregation</div>
+        </div>
+
+        <div class="panel" style="padding: 16px; border-left: 4px solid #2563eb;">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: #2563eb;">
+                {{ total_co2e }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Estimated CO₂e Avoided</div>
+            <div style="font-size: 0.72rem; color: var(--slate-500); margin-top: 2px;">Based on circular life-cycle factors</div>
+        </div>
+    </div>
+
+    <!-- Section: Material Categories & Standard Price Management -->
+    <div class="panel" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div>
+                <h3 style="margin-bottom: 2px;">Standard Benchmark Rates &amp; Carbon Factors</h3>
+                <p style="font-size: 0.8rem; color: var(--slate-500); margin: 0;">
+                    Configure base market reference prices and CO₂e factors per material category. (Changes dynamically recalculate recommended seller rates).
+                </p>
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Material Stream Category</th>
+                        <th class="mono">Code</th>
+                        <th class="mono">Standard Benchmark Rate / Ton</th>
+                        <th class="mono">Carbon Offset Factor (kg CO₂e/t)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat in categories %}
+                    <tr>
+                        <td>
+                            <strong>{{ cat.name }}</strong><br>
+                            <span style="font-size: 0.75rem; color: var(--slate-500);">{{ cat.description }}</span>
+                        </td>
+                        <td class="mono" style="font-size: 0.8rem;">{{ cat.code }}</td>
+                        <td>
+                            <form method="POST" style="display: flex; gap: 8px; align-items: center; margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="category_id" value="{{ cat.id }}">
+                                <span class="mono" style="font-size: 0.85rem;">₹</span>
+                                <input type="number" step="100.00" name="standard_price_per_ton" value="{{ cat.standard_price_per_ton }}" class="mono form-control" style="width: 140px; padding: 5px 8px;">
+                        </td>
+                        <td>
+                                <input type="number" step="0.05" name="carbon_offset_factor" value="{{ cat.carbon_offset_factor }}" class="mono form-control" style="width: 100px; padding: 5px 8px;">
+                                <span class="mono" style="font-size: 0.75rem; color: var(--slate-500);">kg CO₂e/t</span>
+                        </td>
+                        <td>
+                                <button type="submit" name="update_rate" value="1" class="btn btn-outline btn-sm" style="font-size: 0.75rem;">
+                                    Update Benchmark
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--slate-500); padding: 20px;">
+                            No material categories configured yet. Categories will populate automatically via initial seed script.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section: Pending Material Streams Awaiting Admin Approval -->
+    <div class="panel" style="margin-bottom: 24px; border-top: 4px solid var(--amber);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div>
+                <h3 style="margin-bottom: 2px;">Pending Waste Streams Awaiting Admin Approval</h3>
+                <p style="font-size: 0.8rem; color: var(--slate-500); margin: 0;">
+                    Review consistency checks, certificates, and specifications before making listings visible in the marketplace.
+                </p>
+            </div>
+            <span class="mono" style="font-size: 0.8rem; background: var(--amber-tint); color: var(--amber); padding: 4px 10px; border-radius: var(--radius); font-weight: 700;">
+                {{ pending_listings_count }} Pending Review
+            </span>
+        </div>
+
+        {% if pending_listings %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Stream / Material</th>
+                        <th class="mono">Batch ID</th>
+                        <th>Supplier</th>
+                        <th class="mono">Volume</th>
+                        <th class="mono">Price</th>
+                        <th class="mono">Purity</th>
+                        <th>Consistency Check</th>
+                        <th>Review Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p_listing in pending_listings %}
+                    <tr>
+                        <td>
+                            <strong>{{ p_listing.material_name }}</strong><br>
+                            <span class="tag" style="font-size: 0.68rem;">{{ p_listing.get_category_display }}</span>
+                        </td>
+                        <td class="mono" style="font-size: 0.8rem;">#{{ p_listing.batch_id }}</td>
+                        <td>{{ p_listing.supplier.company_name }}</td>
+                        <td class="mono">{{ p_listing.volume_tons }} {{ p_listing.quantity_unit|default:"t" }}</td>
+                        <td class="mono">₹{{ p_listing.price_per_ton|floatformat:0 }}</td>
+                        <td class="mono">{{ p_listing.purity_percent }}%</td>
+                        <td>
+                            {% if p_listing.mismatch_warning %}
+                                <span style="font-size: 0.75rem; color: var(--danger); font-weight: 600;">
+                                    ⚠️ {{ p_listing.mismatch_warning }}
+                                </span>
+                            {% else %}
+                                <span style="font-size: 0.75rem; color: var(--emerald-dark); font-weight: 600;">
+                                    &check; Consistent
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" style="display: flex; gap: 6px; margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="review_listing" value="1">
+                                <input type="hidden" name="listing_id" value="{{ p_listing.id }}">
+                                <button type="submit" name="listing_action" value="approve" class="btn btn-primary btn-sm" style="font-size: 0.75rem;">
+                                    Approve &amp; Publish
+                                </button>
+                                <button type="submit" name="listing_action" value="reject" class="btn btn-danger btn-sm" style="font-size: 0.75rem;">
+                                    Reject
+                                </button>
+                                <a href="{% url 'product_detail' p_listing.id %}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.75rem;">
+                                    Inspect
+                                </a>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--slate-500); padding: 20px;">
+            &check; All submitted waste streams have been reviewed! No listings currently pending.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Section: Reported Listings by Buyers -->
+    {% if reported_listings %}
+    <div class="panel" style="margin-bottom: 24px; border-top: 4px solid var(--danger);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div>
+                <h3 style="margin-bottom: 2px; color: var(--danger);">Flagged &amp; Reported Material Listings</h3>
+                <p style="font-size: 0.8rem; color: var(--slate-500); margin: 0;">
+                    Reports submitted by buyers regarding inaccurate images, counterfeit certificates, or impure batches.
+                </p>
+            </div>
+            <span class="mono" style="font-size: 0.8rem; background: var(--danger-tint); color: var(--danger); padding: 4px 10px; border-radius: var(--radius); font-weight: 700;">
+                {{ reported_listings_count }} Open Incident{{ reported_listings_count|pluralize }}
+            </span>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Reported Material</th>
+                        <th>Reported By</th>
+                        <th>Reason Category</th>
+                        <th>Buyer Notes</th>
+                        <th>Reported At</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rep in reported_listings %}
+                    <tr>
+                        <td>
+                            <strong>{{ rep.listing.material_name }}</strong><br>
+                            <span class="mono" style="font-size: 0.72rem;">Batch #{{ rep.listing.batch_id }}</span>
+                        </td>
+                        <td>{{ rep.reported_by.username }}</td>
+                        <td><span class="status-pill pending">{{ rep.get_reason_display }}</span></td>
+                        <td style="font-size: 0.8rem; max-width: 280px;">{{ rep.description }}</td>
+                        <td class="mono" style="font-size: 0.75rem;">{{ rep.created_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            <a href="/admin/marketplace/reportedlisting/{{ rep.id }}/change/" class="btn btn-outline btn-sm" style="font-size: 0.72rem;">
+                                Manage in Admin &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+<style>
+    .form-control {
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}

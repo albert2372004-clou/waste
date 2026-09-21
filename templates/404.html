@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Stream Not Found | Circular Waste Intelligence System{% endblock %}
+
+{% block content %}
+<div class="wrap" style="padding: 60px 24px; text-align: center;">
+    <div class="panel" style="max-width: 540px; margin: 0 auto; padding: 40px 30px;">
+        <span class="status-pill block" style="font-size: 0.85rem; padding: 6px 14px; margin-bottom: 16px;">Error 404</span>
+        <h1 style="font-size: var(--step-3); margin-top: 12px; margin-bottom: 8px;">Material Stream Not Found</h1>
+        <p style="color: var(--slate-500); font-size: 0.9rem; margin-bottom: 24px;">
+            The byproduct listing, batch ID, or page you requested does not exist or has been relocated within the network.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <a href="{% url 'index' %}" class="btn btn-primary">Return to Marketplace</a>
+            <a href="javascript:history.back()" class="btn btn-outline">Go Back</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

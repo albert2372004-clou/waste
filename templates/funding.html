@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Circular Funding & Innovation Grants — Circular Waste Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Circular Innovation &amp; Upcycling Capital</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'index' %}">Marketplace</a> / Circular Projects &amp; Micro-Grants
+            </div>
+        </div>
+        <div>
+            <span class="mono" style="font-size: 0.8rem; background: var(--emerald-tint); color: var(--emerald-dark); padding: 5px 12px; border-radius: var(--radius); border: 1px solid #bbf7d0; font-weight: 600;">
+                🌱 Active Kerala Sustainability Fund
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px; padding-bottom: 60px;">
+    <!-- Hero Explainer -->
+    <div class="panel" style="background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%); color: #fff; margin-bottom: 24px; border: none;">
+        <div style="max-width: 800px;">
+            <div style="display: inline-block; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); padding: 4px 12px; border-radius: var(--radius); font-size: 0.75rem; font-family: var(--font-mono); font-weight: 600; color: #6ee7b7; margin-bottom: 12px;">
+                COMMUNITY CIRCULAR ECONOMY INITIATIVE
+            </div>
+            <h2 style="font-size: var(--step-3); color: #fff; margin-bottom: 12px;">
+                Accelerating Kerala's Industrial Byproduct Transition
+            </h2>
+            <p style="font-size: 0.95rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;">
+                Support local industrial innovators, recycling startups, and zero-waste processors turning Kerala's agro and rubber byproducts into high-value secondary resources. Direct enterprise pledges empower sustainable infrastructure without intermediary friction.
+            </p>
+            <div style="display: flex; gap: 24px; font-size: 0.85rem; color: #94a3b8; flex-wrap: wrap;">
+                <div>⚡ <strong>100% Directed:</strong> Direct allocation to verified facility upgrades</div>
+                <div>🛡️ <strong>Admin Supervised:</strong> Milestone verification prior to release</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explicit Educational Explainer: What is the Need of Circular Fund? -->
+    <div class="panel" style="background: #ffffff; border: 1px solid #bbf7d0; border-left: 5px solid var(--emerald); margin-bottom: 28px; padding: 22px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <span style="font-size: 1.4rem;">💡</span>
+            <h3 style="font-size: 1.15rem; color: var(--emerald-dark); margin-bottom: 0;">What is the Need for the Circular Innovation Fund?</h3>
+        </div>
+        <p style="font-size: 0.88rem; color: var(--slate-700); line-height: 1.6; margin-bottom: 16px;">
+            Industrial circular economy cannot function on simple scrap trading alone. Raw industrial byproducts like discarded vulcanized tyres, raw coconut husks, and marine fish scales <strong>cannot be used directly by factories without pre-processing</strong>.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 12px;">
+            <div style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: 4px; padding: 14px;">
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--slate-900); margin-bottom: 6px;">⚙️ 1. The Pre-Processing Machinery Barrier</div>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.5;">
+                    To convert scrap tyres into road bitumen additive, facilities require specialized <em>cryogenic pulverizers</em>. Converting fish scales into biomedical collagen requires <em>enzymatic peptide extractors</em>. Small MSME recyclers in Kerala lack the capital to purchase this industrial equipment.
+                </p>
+            </div>
+            <div style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: 4px; padding: 14px;">
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--slate-900); margin-bottom: 6px;">🤝 2. Enterprise Co-Investment & Micro-Pledges</div>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.5;">
+                    The Circular Fund enables large buyers (tyre producers, infrastructure developers, activated carbon kilns) to pool micro-grants and back local processing units. In return, contributing buyers secure priority off-take agreements.
+                </p>
+            </div>
+            <div style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: 4px; padding: 14px;">
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--slate-900); margin-bottom: 6px;">🌿 3. 100% Zero-Landfill Closed Loop</div>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.5;">
+                    By funding local conversion machinery in Kottayam, Kochi, and Palakkad, byproduct streams avoid open dumping. Instead, they re-enter Kerala's industrial production lines as certified secondary raw materials.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Cards Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px;">
+        {% for project in projects %}
+            <div class="panel" style="display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid var(--emerald);">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <span class="mono" style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; background: var(--emerald-tint); color: var(--emerald-dark); padding: 3px 8px; border-radius: var(--radius); font-weight: 600;">
+                            {{ project.get_category_display }}
+                        </span>
+                        <span style="font-size: 0.75rem; color: var(--slate-500);">
+                            📍 {{ project.location }}
+                        </span>
+                    </div>
+
+                    <h3 style="font-size: 1.15rem; margin-bottom: 6px; line-height: 1.3;">
+                        {{ project.title }}
+                    </h3>
+                    <div style="font-size: 0.8rem; color: var(--slate-600); margin-bottom: 14px;">
+                        Beneficiary: <strong>{{ project.beneficiary_enterprise }}</strong>
+                    </div>
+
+                    <p style="font-size: 0.85rem; color: var(--slate-700); line-height: 1.5; margin-bottom: 20px;">
+                        {{ project.description }}
+                    </p>
+                </div>
+
+                <div>
+                    <!-- Progress Bar -->
+                    <div style="margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 6px;">
+                            <span style="font-weight: 700; color: var(--emerald-dark);">₹{{ project.raised_amount|floatformat:0 }} raised</span>
+                            <span style="color: var(--slate-500);">Goal: ₹{{ project.target_amount|floatformat:0 }}</span>
+                        </div>
+                        <div style="height: 10px; background: var(--slate-200); border-radius: 5px; overflow: hidden;">
+                            <div style="width: {{ project.progress_percent }}%; max-width: 100%; height: 100%; background: linear-gradient(90deg, var(--emerald) 0%, #10b981 100%);"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--slate-500); margin-top: 4px;">
+                            <span>{{ project.progress_percent }}% funded</span>
+                            <span>{{ project.donor_count }} Backer{{ project.donor_count|pluralize }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Pledge Form Modal Trigger / Accordion -->
+                    <button type="button" class="btn btn-primary btn-block" onclick="togglePledgeBox('pledge-box-{{ project.pk }}')">
+                        🌱 Pledge Support / Back Project
+                    </button>
+
+                    <div id="pledge-box-{{ project.pk }}" style="display: none; margin-top: 14px; padding: 14px; background: var(--paper); border: 1px solid var(--slate-200); border-radius: var(--radius);">
+                        <form method="POST" action="{% url 'funding_pledge' project.pk %}">
+                            {% csrf_token %}
+                            <label style="display: block; font-size: 0.78rem; font-weight: 600; margin-bottom: 6px; color: var(--slate-700);">
+                                Enter Enterprise Pledge Amount (₹)
+                            </label>
+                            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                                <input type="number" name="amount" value="5000" min="500" step="500" class="form-control mono" style="font-weight: 700; font-size: 0.95rem;" required>
+                                <button type="submit" class="btn btn-amber btn-sm" style="white-space: nowrap; padding: 0 16px;">
+                                    Confirm Pledge
+                                </button>
+                            </div>
+                            <div style="font-size: 0.7rem; color: var(--slate-500);">
+                                💡 Simulated circular micro-pledge for research &amp; demonstration platform.
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="panel" style="grid-column: 1 / -1; text-align: center; padding: 48px;">
+                <p style="font-size: 1rem; color: var(--slate-500);">No active circular funding initiatives found.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .form-control {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.85rem;
+        background: #fff;
+    }
+    .form-control:focus {
+        outline: 2px solid var(--emerald);
+        border-color: var(--emerald);
+    }
+</style>
+
+<script>
+    function togglePledgeBox(id) {
+        const box = document.getElementById(id);
+        if (box) {
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+</script>
+{% endblock %}

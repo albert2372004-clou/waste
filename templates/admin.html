@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Company Verification Hub — Circular Waste Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Company Verification Hub</h1>
+            <div class="breadcrumb">
+                Platform Administration &bull; Permit Compliance &amp; Entity Onboarding
+            </div>
+        </div>
+        <div>
+            <span class="status-pill pending" style="font-size:0.75rem; padding: 5px 12px;">
+                {{ count_pending }} Awaiting Review
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px;">
+
+    <!-- Demo System Disclaimer Alert -->
+    <div style="background: var(--amber-tint); border: 1px solid #fde68a; border-left: 4px solid var(--amber); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 24px; font-size: 0.85rem; color: #92400e;">
+        <strong>Notice — Automated Demonstration Verification:</strong>
+        This verification system performs automated structural checks on corporate registration identifiers (CIN / PCB standard format) and attached documentation files. It is an educational demonstration system and does not connect to live MCA or state pollution control board government registries.
+    </div>
+
+    <!-- Metric Cards -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+        <div class="panel" style="padding: 16px;">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--slate-950);">
+                {{ total_companies }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Total Registered Companies</div>
+        </div>
+        <div class="panel" style="padding: 16px; border-left: 4px solid var(--amber);">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--amber);">
+                {{ count_pending }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Pending / Flagged Verification</div>
+        </div>
+        <div class="panel" style="padding: 16px; border-left: 4px solid var(--emerald);">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--emerald-dark);">
+                {{ count_verified }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Verified (Auto &amp; Manual)</div>
+        </div>
+        <div class="panel" style="padding: 16px; border-left: 4px solid var(--danger);">
+            <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--danger);">
+                {{ count_rejected }}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 4px;">Rejected Registrations</div>
+        </div>
+    </div>
+
+    <!-- Section 1: Pending & Flagged Applications -->
+    <div class="panel" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="margin-bottom: 0;">Applications Requiring Administrator Action</h3>
+            <span style="font-size: 0.78rem; color: var(--slate-500);">{{ pending_companies.count }} records</span>
+        </div>
+
+        {% if pending_companies %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th class="mono">Reg Number</th>
+                        <th class="mono">GSTIN</th>
+                        <th>Role</th>
+                        <th>Permit Proof</th>
+                        <th>Status</th>
+                        <th style="min-width: 260px;">Verification Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in pending_companies %}
+                    <tr>
+                        <td>
+                            <strong>{{ company.company_name }}</strong><br>
+                            <span style="font-size: 0.72rem; color: var(--slate-500);">
+                                {{ company.authorized_person }} &bull; {{ company.phone }}
+                            </span>
+                        </td>
+                        <td class="mono" style="font-size: 0.8rem;">{{ company.registration_number }}</td>
+                        <td class="mono" style="font-size: 0.8rem;">{{ company.gstin }}</td>
+                        <td>
+                            <span class="tag" style="text-transform: capitalize;">{{ company.get_user_type_display }}</span>
+                        </td>
+                        <td>
+                            {% if company.permit_document %}
+                                <a href="{{ company.permit_document.url }}" target="_blank" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 4px;">
+                                    View Document &nearr;
+                                </a>
+                            {% else %}
+                                <span style="font-size: 0.75rem; color: var(--danger);">No document attached</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if company.verification_status == 'flagged' %}
+                                <span class="status-pill flagged">Flagged for Review</span>
+                            {% else %}
+                                <span class="status-pill pending">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" style="display: flex; gap: 6px; align-items: center; margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="company_id" value="{{ company.id }}">
+                                
+                                <button type="submit" name="action" value="approve" class="btn btn-primary btn-sm" title="Approve this company">
+                                    Approve
+                                </button>
+                                <button type="submit" name="action" value="flag" class="btn btn-amber btn-sm" title="Flag for further review">
+                                    Flag for Review
+                                </button>
+                                <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm" title="Reject registration">
+                                    Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <div style="padding: 24px; text-align: center; color: var(--slate-500); font-size: 0.88rem;">
+                No pending or flagged company registrations awaiting review.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Section 2: Verified Companies -->
+    <div class="panel" style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="margin-bottom: 0;">Verified Marketplace Companies</h3>
+            <span style="font-size: 0.78rem; color: var(--slate-500);">{{ verified_companies.count }} verified</span>
+        </div>
+
+        {% if verified_companies %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th class="mono">Reg Number</th>
+                        <th class="mono">GSTIN</th>
+                        <th>Role</th>
+                        <th>Permit</th>
+                        <th>Verification Method</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in verified_companies %}
+                    <tr>
+                        <td>
+                            <strong>{{ company.company_name }}</strong><br>
+                            <span style="font-size: 0.72rem; color: var(--slate-500);">{{ company.address }}</span>
+                        </td>
+                        <td class="mono" style="font-size: 0.8rem;">{{ company.registration_number }}</td>
+                        <td class="mono" style="font-size: 0.8rem;">{{ company.gstin }}</td>
+                        <td><span class="tag" style="text-transform: capitalize;">{{ company.get_user_type_display }}</span></td>
+                        <td>
+                            {% if company.permit_document %}
+                                <a href="{{ company.permit_document.url }}" target="_blank" style="color: var(--emerald-dark); font-weight: 600; font-size: 0.78rem;">
+                                    Permit Attached &nearr;
+                                </a>
+                            {% else %}
+                                <span style="font-size: 0.75rem; color: var(--slate-500);">None</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if company.verification_status == 'auto_verified' %}
+                                <span class="status-pill ok">Auto Verified</span>
+                            {% elif company.verification_status == 'manual_approved' %}
+                                <span class="status-pill ok">Manual Approved</span>
+                            {% else %}
+                                <span class="status-pill ok">Verified</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" style="display: inline; margin: 0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="company_id" value="{{ company.id }}">
+                                <button type="submit" name="action" value="flag" class="btn btn-outline btn-sm">
+                                    Flag / Re-evaluate
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <div style="padding: 24px; text-align: center; color: var(--slate-500); font-size: 0.88rem;">
+                No active verified companies registered yet.
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

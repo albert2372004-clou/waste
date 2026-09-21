@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}{{ listing.material_name }} (#{{ listing.batch_id }}) — Circular Waste Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div class="breadcrumb">
+            <a href="{% url 'index' %}">Marketplace</a> / 
+            <a href="{% url 'index' %}?category={{ listing.category }}">{{ listing.get_category_display }}</a> / 
+            <strong>{{ listing.material_name }}</strong>
+        </div>
+        <div>
+            <span class="mono" style="font-size: 0.8rem; background: var(--slate-200); padding: 4px 8px; border-radius: var(--radius);">
+                Batch #{{ listing.batch_id }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding: 24px; display: grid; grid-template-columns: 1.2fr 1fr 0.9fr; gap: 24px; align-items: start;">
+    
+    <!-- Left: Flipkart / Amazon Style Interactive Image Gallery & Quality Certificates -->
+    <div>
+        <!-- Main Big Preview Image -->
+        <div style="aspect-ratio: 4/3; border-radius: var(--radius); border: 2px solid var(--slate-200); overflow: hidden; margin-bottom: 12px; background: #0f172a; box-shadow: 0 8px 24px rgba(15,23,42,0.1); position: relative;">
+            {% if listing.image %}
+                <img id="main-product-image" src="{{ listing.image.url }}" alt="{{ listing.material_name }}" style="width: 100%; height: 100%; object-fit: cover; transition: opacity 0.25s ease, transform 0.3s ease;">
+            {% else %}
+                <div id="main-fallback-visual" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                    <div style="font-size: 3.5rem; margin-bottom: 6px;">
+                        {% if listing.category == 'rubber' %}🛞{% elif listing.category == 'textile' %}🧵{% elif listing.category == 'coconut' %}🥥{% elif listing.category == 'plastic' %}🧪{% elif listing.category == 'fish' %}🐟{% else %}📦{% endif %}
+                    </div>
+                    <span class="mono" style="font-size: 0.82rem; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.15);">
+                        Batch #{{ listing.batch_id }}
+                    </span>
+                    <span style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">Kerala Secondary Raw Material Stream</span>
+                </div>
+                <img id="main-product-image" src="" alt="{{ listing.material_name }}" style="width: 100%; height: 100%; object-fit: cover; display: none; transition: opacity 0.25s ease;">
+            {% endif %}
+
+            <!-- View Label Overlay -->
+            <span id="main-image-label" class="mono" style="position: absolute; bottom: 10px; left: 10px; background: rgba(15,23,42,0.85); color: #fff; font-size: 0.72rem; padding: 3px 8px; border-radius: var(--radius); backdrop-filter: blur(4px);">
+                📷 Primary Batch Lot View
+            </span>
+            <span style="position: absolute; top: 10px; left: 10px; background: var(--emerald); color: #fff; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: var(--radius); text-transform: uppercase;">
+                Click Swatch To Inspect
+            </span>
+        </div>
+
+        <!-- Flipkart / Amazon Style Thumbnail Swatches -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
+            <!-- Swatch 1: Primary Stream View -->
+            <div class="thumb-swatch active" onmouseover="swapProductImage('{% if listing.image %}{{ listing.image.url }}{% endif %}', '📷 Primary Batch Lot View', this)" onclick="swapProductImage('{% if listing.image %}{{ listing.image.url }}{% endif %}', '📷 Primary Batch Lot View', this)" style="aspect-ratio: 1; border-radius: 4px; border: 2px solid var(--emerald); cursor: pointer; overflow: hidden; background: #1e293b; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.65rem; color: #cbd5e1; text-align: center; padding: 2px; transition: all 0.2s;">
+                {% if listing.image %}
+                    <img src="{{ listing.image.url }}" alt="{{ listing.material_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <span style="font-size: 1.2rem;">{% if listing.category == 'rubber' %}🛞{% elif listing.category == 'textile' %}🧵{% elif listing.category == 'coconut' %}🥥{% elif listing.category == 'plastic' %}🧪{% else %}📦{% endif %}</span>
+                    <span style="font-weight: 600;">Main View</span>
+                {% endif %}
+            </div>
+
+            {% for g_img in gallery_images %}
+                <div class="thumb-swatch" onmouseover="swapProductImage('{{ g_img.image.url }}', '📷 {{ g_img.caption|default:"Alternative Angle" }}', this)" onclick="swapProductImage('{{ g_img.image.url }}', '📷 {{ g_img.caption|default:"Alternative Angle" }}', this)" style="aspect-ratio: 1; border-radius: 4px; border: 2px solid var(--slate-200); cursor: pointer; overflow: hidden; background: #f1f5f9; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--slate-700); text-align: center; padding: 2px; transition: all 0.2s;">
+                    <img src="{{ g_img.image.url }}" alt="{{ g_img.caption }}" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+            {% endfor %}
+
+            <!-- Lab Test Certificate / Assay -->
+            <div class="thumb-swatch" onmouseover="swapProductImage('{% if listing.quality_certificate %}{{ listing.quality_certificate.url }}{% endif %}', '📄 NABL Chemical Assay Report', this)" onclick="swapProductImage('{% if listing.quality_certificate %}{{ listing.quality_certificate.url }}{% endif %}', '📄 NABL Chemical Assay Report', this)" style="aspect-ratio: 1; border-radius: 4px; border: 2px solid var(--slate-200); cursor: pointer; overflow: hidden; background: #eff6ff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.65rem; color: #1e40af; text-align: center; padding: 4px; transition: all 0.2s;">
+                <span style="font-size: 1.2rem;">🔬</span>
+                <span style="font-weight: 600;">Lab Assay</span>
+            </div>
+
+            <!-- Factory Weighbridge Manifest -->
+            <div class="thumb-swatch" onmouseover="swapProductImage('', '⚖️ Electronic Weighbridge Calibration Tag', this)" onclick="swapProductImage('', '⚖️ Electronic Weighbridge Calibration Tag', this)" style="aspect-ratio: 1; border-radius: 4px; border: 2px solid var(--slate-200); cursor: pointer; overflow: hidden; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--slate-700); text-align: center; padding: 4px; transition: all 0.2s;">
+                <span style="font-size: 1.2rem;">⚖️</span>
+                <span style="font-weight: 600;">Weighment</span>
+            </div>
+        </div>
+
+        <!-- Quality Assurance & Sampling Certificate Box -->
+        <div class="panel" style="padding: 16px; margin-top: 14px; border-left: 4px solid var(--emerald);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div>
+                    <div style="font-weight: 700; font-size: 0.85rem; color: var(--emerald-dark); display: flex; align-items: center; gap: 6px;">
+                        <span>🛡️ {{ listing.get_quality_grade_display|default:"Grade A Quality Certified" }}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--slate-600); margin-top: 2px;">
+                        Assay Purity: <strong>{{ listing.purity_percent }}%</strong> &bull; Condition: <strong>{{ listing.condition|default:"Recyclable Clean" }}</strong>
+                    </div>
+                    <div class="mono" style="font-size: 0.7rem; color: #2563eb; margin-top: 3px;">
+                        Accreditation: <strong>{{ listing.lab_accreditation_number|default:"NABL-KL-2026/TC-8812" }}</strong>
+                    </div>
+                </div>
+                <span class="status-pill ok" style="font-size: 0.65rem;">
+                    {{ listing.get_lab_audit_status_display|default:"Audited & Verified" }}
+                </span>
+            </div>
+            
+            <div style="font-size: 0.74rem; color: var(--slate-600); background: var(--emerald-tint); border: 1px solid #bbf7d0; border-radius: 4px; padding: 8px; margin-top: 8px;">
+                <strong>Anti-Impurity Guarantee:</strong> {{ listing.sampling_protocol|default:"ASTM D6323 Multi-point composite sampling guarantee across bulk shipment." }}
+            </div>
+
+            {% if listing.quality_certificate %}
+                <div style="margin-top: 10px;">
+                    <a href="{{ listing.quality_certificate.url }}" target="_blank" class="btn btn-primary btn-sm btn-block" style="font-size: 0.75rem;">
+                        📄 Download Official Lab Assay Certificate (PDF/IMG)
+                    </a>
+                </div>
+            {% else %}
+                <div style="margin-top: 8px; font-size: 0.72rem; color: var(--slate-500);">
+                    &check; Standard accredited lab report on file with KSPCB manifest.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="panel" style="padding: 14px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-weight: 600; font-size: 0.82rem;">KSPCB Consent to Operate / Manifest</div>
+                <div style="font-size: 0.72rem; color: var(--slate-500);">Compliance ID: <span class="mono">{{ listing.compliance_id }}</span></div>
+            </div>
+            <span class="status-pill ok" style="font-size: 0.65rem;">Authorized</span>
+        </div>
+
+        <!-- Buyer Trust & Report Inaccuracy Action -->
+        <div style="margin-top: 12px; text-align: center;">
+            <a href="{% url 'report_listing' listing.pk %}" class="btn btn-outline btn-sm btn-block" style="border-color: #fecaca; color: #b91c1c; font-size: 0.74rem;">
+                🚩 Report Inaccurate Description / Fake Listing
+            </a>
+        </div>
+    </div>
+
+    <!-- Middle: Title, Reliability, Specs -->
+    <div>
+        <h1 style="font-size: var(--step-3); line-height: 1.2;">{{ listing.material_name }}</h1>
+
+        {% if listing.description %}
+            <p style="font-size: 0.88rem; color: var(--slate-700); margin: 10px 0 14px; line-height: 1.6;">
+                {{ listing.description }}
+            </p>
+        {% endif %}
+
+        <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0 16px; flex-wrap: wrap;">
+            <span style="background: var(--amber-tint); border: 1px solid #fde68a; color: var(--amber); font-family: var(--font-mono); font-weight: 700; font-size: 0.8rem; padding: 4px 8px; border-radius: var(--radius);">
+                {{ listing.trust_score }}% Fulfillment Reliability
+            </span>
+            {% if listing.permit_verified %}
+                <span class="tag verified">&check; Green Permit Verified</span>
+            {% endif %}
+            <span class="tag" style="background: var(--emerald-tint); color: var(--emerald-dark); font-weight: 600;">
+                {{ match_info.label }}
+            </span>
+        </div>
+
+        <div style="margin: 16px 0;">
+            <span class="mono" style="font-size: 2.2rem; font-weight: 700; color: var(--slate-950);">
+                ₹{{ listing.price_per_ton|floatformat:0 }}
+            </span>
+            <span style="color: var(--slate-500); font-size: 0.85rem;">/ {{ listing.quantity_unit|default:"ton" }}</span>
+        </div>
+
+        <div style="font-size: 0.85rem; border-top: 1px dashed var(--slate-200);">
+            <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
+                <span style="color: var(--slate-500);">Supplier Enterprise</span>
+                <strong>{{ listing.supplier.company_name }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
+                <span style="color: var(--slate-500);">Facility Location</span>
+                <span>{{ listing.location }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
+                <span style="color: var(--slate-500);">Available Batch Volume</span>
+                <span class="mono"><strong>{{ listing.volume_tons }} {{ listing.quantity_unit|default:"tons" }}</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
+                <span style="color: var(--slate-500);">Condition</span>
+                <span><strong>{{ listing.condition|default:"Recyclable Clean" }}</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
+                <span style="color: var(--slate-500);">Minimum Order Quantity (MOQ)</span>
+                <span class="mono">{{ listing.moq_tons }} {{ listing.quantity_unit|default:"tons" }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
+                <span style="color: var(--slate-500);">Discharge Lead Time</span>
+                <span>{{ listing.lead_time_days }} business days</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
+                <span style="color: var(--slate-500);">Estimated CO₂e Reduction</span>
+                <span class="mono" style="color: var(--emerald-dark); font-weight: 600;">{{ listing.estimated_carbon_savings }} t CO₂e</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Procurement Box -->
+    <div class="panel" style="position: sticky; top: 75px; background: #fff;">
+        <h3>Procurement Box</h3>
+        
+        {% if request.user.is_authenticated and request.user.company and request.user.company.user_type == 'supplier' %}
+            <!-- Pure Supplier: Procurement restricted -->
+            <div style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: var(--radius); padding: 20px; text-align: center; margin-top: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 8px;">🏢</div>
+                <h4 style="font-size: 0.95rem; color: var(--slate-900); margin-bottom: 6px;">Supplier View Mode</h4>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.5; margin-bottom: 16px;">
+                    You are viewing this byproduct stream as a registered <strong>Supplier Enterprise</strong>. Requisition ordering and Batch Cart dispatch are restricted to verified Buyer enterprises.
+                </p>
+                <a href="{% url 'dashboard' %}" class="btn btn-primary btn-sm btn-block">
+                    &larr; Return to Supplier Dashboard
+                </a>
+            </div>
+        {% elif request.session.active_mode == 'supplier' %}
+            <!-- Dual-role currently in Supplier Mode -->
+            <div style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: var(--radius); padding: 20px; text-align: center; margin-top: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 8px;">🔄</div>
+                <h4 style="font-size: 0.95rem; color: var(--slate-900); margin-bottom: 6px;">Active in Supplier Mode</h4>
+                <p style="font-size: 0.8rem; color: var(--slate-600); line-height: 1.5; margin-bottom: 16px;">
+                    Your account is currently set to <strong>Supplier Mode</strong>. Switch to Buyer Mode to place procurement requisitions and access Batch Cart aggregation.
+                </p>
+                <a href="{% url 'switch_mode' 'buyer' %}" class="btn btn-amber btn-sm btn-block">
+                    Switch to Buyer Mode &rarr;
+                </a>
+            </div>
+        {% else %}
+            <!-- Buyer or Visitor: Requisition Form -->
+            <form method="POST" action="{% url 'checkout' pk=listing.pk %}">
+                {% csrf_token %}
+                <label style="font-size: 0.78rem; color: var(--slate-500); display: block; margin-bottom: 6px;">
+                    Volume to Procure ({{ listing.quantity_unit|default:"Tons" }})
+                </label>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                    <input type="number" id="volume-input" name="volume_requested" value="{{ listing.moq_tons }}" min="{{ listing.moq_tons }}" max="{{ listing.volume_tons }}" class="mono" style="width: 100%; padding: 8px 12px; border: 1px solid var(--slate-300); border-radius: var(--radius); font-size: 1rem; text-align: center;" oninput="updateCalculator(this.value)">
+                </div>
+
+                <!-- Live Quotation Calculation Box -->
+                <div style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: var(--radius); padding: 12px; font-size: 0.8rem; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                        <span>Material (<span id="calc-vol">{{ listing.moq_tons }}</span>t &times; ₹{{ listing.price_per_ton|floatformat:0 }})</span>
+                        <span class="mono" id="calc-mat">₹0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                        <span>Corridor Freight (142 km @ ₹3.20/t-km)</span>
+                        <span class="mono" id="calc-freight">₹0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.75rem; color: var(--slate-600);">
+                        <span>Base Dispatch &amp; Weighment</span>
+                        <span class="mono">₹1,500</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.75rem; color: var(--slate-600);">
+                        <span>Paliakkara Highway Toll / Border Clearance</span>
+                        <span class="mono">₹450</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--slate-200); margin-top: 6px; font-weight: 700;">
+                        <span>Estimated Requisition Total</span>
+                        <span class="mono" id="calc-total" style="font-size: 0.95rem; color: var(--slate-950);">₹0</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="margin-bottom: 8px; padding: 11px;">
+                    Send Direct Procurement Request
+                </button>
+            </form>
+
+            <a href="{% url 'cart_add' pk=listing.pk %}" class="btn btn-amber btn-block" style="padding: 10px; font-size: 0.82rem;">
+                + Add to Multi-Supplier Batch Cart
+            </a>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Specification Section -->
+<div class="wrap" style="padding: 0 24px 64px;">
+    <div class="panel">
+        <h3>Industrial Technical Specifications</h3>
+        <table>
+            <tbody>
+                <tr>
+                    <th style="width: 200px;">Moisture Content</th>
+                    <td class="mono">{{ listing.moisture_percent }}%</td>
+                    <th style="width: 200px;">Packaging Type</th>
+                    <td>{{ listing.packaging_type }}</td>
+                </tr>
+                <tr>
+                    <th>Contamination Level</th>
+                    <td class="mono">{{ listing.contamination_percent }}%</td>
+                    <th>Compliance ID</th>
+                    <td class="mono">{{ listing.compliance_id }}</td>
+                </tr>
+                <tr>
+                    <th>Particle / Granule Size</th>
+                    <td class="mono">{{ listing.particle_size }}</td>
+                    <th>Storage Condition</th>
+                    <td>Covered industrial warehouse, ambient temp</td>
+                </tr>
+                <tr>
+                    <th>NABL Testing Lab ID</th>
+                    <td class="mono">{{ listing.lab_accreditation_number|default:"NABL-KL-2026/TC-8812" }}</td>
+                    <th>Audit Status</th>
+                    <td><span class="status-pill ok">{{ listing.get_lab_audit_status_display|default:"Audited & Verified" }}</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Flipkart / Amazon Interactive Image Swapping Swatcher
+    function swapProductImage(src, labelText, swatchElem) {
+        const mainImg = document.getElementById('main-product-image');
+        const fallback = document.getElementById('main-fallback-visual');
+        const label = document.getElementById('main-image-label');
+
+        // Update active highlight on thumbnail swatches
+        document.querySelectorAll('.thumb-swatch').forEach(el => {
+            el.style.borderColor = 'var(--slate-200)';
+            el.classList.remove('active');
+        });
+        if (swatchElem) {
+            swatchElem.style.borderColor = 'var(--emerald)';
+            swatchElem.classList.add('active');
+        }
+
+        // Update Label
+        if (label) {
+            label.innerText = labelText;
+        }
+
+        if (src) {
+            if (fallback) fallback.style.display = 'none';
+            if (mainImg) {
+                mainImg.style.display = 'block';
+                mainImg.style.opacity = '0';
+                setTimeout(() => {
+                    mainImg.src = src;
+                    mainImg.style.opacity = '1';
+                }, 100);
+            }
+        } else {
+            // Revert to industrial visual pattern
+            if (mainImg) mainImg.style.display = 'none';
+            if (fallback) fallback.style.display = 'flex';
+        }
+    }
+
+    const pricePerTon = {{ listing.price_per_ton }};
+    function updateCalculator(volume) {
+        const v = parseFloat(volume) || {{ listing.moq_tons }};
+        const mat = Math.round(v * pricePerTon);
+        // Base dispatch ₹1500 + Toll ₹450 + ton-km freight (v * 142 * 3.20)
+        const freight = Math.round(1500 + 450 + (v * 142 * 3.20));
+        const total = mat + freight;
+
+        document.getElementById('calc-vol').innerText = v;
+        document.getElementById('calc-mat').innerText = '₹' + mat.toLocaleString('en-IN');
+        document.getElementById('calc-freight').innerText = '₹' + freight.toLocaleString('en-IN');
+        document.getElementById('calc-total').innerText = '₹' + total.toLocaleString('en-IN');
+    }
+    updateCalculator({{ listing.moq_tons }});
+</script>
+{% endblock %}

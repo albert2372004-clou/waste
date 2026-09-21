@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Procurement Orders & Live Logistics Tracking — Circular Waste Intelligence Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Amazon / Flipkart Style Interactive Tracking Stepper */
+    .tracking-card {
+        background: #ffffff;
+        border: 1px solid var(--slate-200);
+        border-radius: 6px;
+        padding: 22px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .tracking-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1);
+    }
+
+    .tracking-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 12px;
+        border-bottom: 1px solid var(--slate-200);
+        padding-bottom: 16px;
+        margin-bottom: 20px;
+    }
+
+    .tracking-stepper {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        position: relative;
+        margin: 28px 0 20px;
+    }
+    .tracking-stepper::before {
+        content: '';
+        position: absolute;
+        top: 18px;
+        left: 5%;
+        right: 5%;
+        height: 4px;
+        background: #e2e8f0;
+        z-index: 1;
+    }
+    .tracking-stepper-progress {
+        position: absolute;
+        top: 18px;
+        left: 5%;
+        height: 4px;
+        background: var(--emerald);
+        z-index: 2;
+        transition: width 0.4s ease;
+    }
+
+    .step-node {
+        position: relative;
+        z-index: 3;
+        text-align: center;
+    }
+    .step-circle {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 3px solid #cbd5e1;
+        margin: 0 auto 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: var(--slate-500);
+        transition: all 0.2s ease;
+    }
+    .step-node.completed .step-circle {
+        background: var(--emerald);
+        border-color: var(--emerald);
+        color: #ffffff;
+    }
+    .step-node.active .step-circle {
+        background: #ffffff;
+        border-color: var(--amber);
+        color: var(--amber);
+        box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.2);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(217, 119, 6, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+    }
+    .step-title {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--slate-900);
+        margin-bottom: 2px;
+    }
+    .step-subtitle {
+        font-size: 0.72rem;
+        color: var(--slate-500);
+    }
+
+    .logistics-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+        background: #f8fafc;
+        border: 1px solid var(--slate-200);
+        border-radius: 6px;
+        padding: 16px 20px;
+        margin-top: 16px;
+    }
+
+    .info-group {
+        margin-bottom: 8px;
+    }
+    .info-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        color: var(--slate-500);
+        letter-spacing: 0.03em;
+        font-weight: 600;
+    }
+    .info-val {
+        font-size: 0.88rem;
+        color: var(--slate-900);
+        font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+        .tracking-stepper { grid-template-columns: 1fr; gap: 16px; text-align: left; }
+        .tracking-stepper::before, .tracking-stepper-progress { display: none; }
+        .step-node { display: flex; align-items: center; gap: 12px; text-align: left; }
+        .step-circle { margin: 0; flex-shrink: 0; }
+        .logistics-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Procurement Orders &amp; Live Tracking</h1>
+            <div class="breadcrumb">
+                Kerala Industrial Logistics Corridor &bull; Real-time Industrial Byproduct Consignments
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'index' %}" class="btn btn-outline btn-sm">&larr; Return to Marketplace</a>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px;">
+    
+    {% if orders %}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <p style="font-size: 0.88rem; color: var(--slate-600);">
+                Active requisitions with automated dispatch tracking, weighbridge certificates, and live Kerala transit monitoring.
+            </p>
+            <span class="user-tag">{{ orders.count }} Active Consignments</span>
+        </div>
+
+        {% for order in orders %}
+        <div class="tracking-card">
+            <!-- Header with Order metadata -->
+            <div class="tracking-header">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
+                        <span style="font-family: var(--font-mono); font-weight: 700; font-size: 1rem; color: var(--emerald-dark);">
+                            🚚 Tracking ID: {{ order.tracking_number|default:"AG-KL-72910" }}
+                        </span>
+
+                        {% if order.payment_status == 'escrow_held' %}
+                            <span class="status-pill pending" title="Buyer funds locked in platform escrow">🔒 Escrow Held (Pending Supplier Dispatch)</span>
+                        {% elif order.payment_status == 'released_to_supplier' %}
+                            <span class="status-pill ok" title="Escrow funds released to supplier">💰 Escrow Released to Supplier</span>
+                        {% elif order.payment_status == 'refunded' %}
+                            <span class="status-pill block" title="Escrow refunded back to buyer">↩️ Escrow Refunded</span>
+                        {% endif %}
+
+                        {% if order.status == 'pending' %}
+                            <span class="status-pill pending">Awaiting Supplier Confirmation</span>
+                        {% elif order.status == 'accepted' %}
+                            <span class="status-pill ok">Supplier Accepted &amp; Dispatched</span>
+                        {% elif order.status == 'rejected' %}
+                            <span class="status-pill block">Order Rejected</span>
+                        {% endif %}
+
+                        <span class="tag verified">KSPCB Manifest Validated</span>
+                        {% if order.listing.quality_grade %}
+                            <span class="tag" style="background:#eff6ff; color:#1e40af; border-color:#bfdbfe; font-weight:600;">
+                                🏅 {{ order.listing.get_quality_grade_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--slate-600);">
+                        Material: <strong>{{ order.listing.material_name }}</strong> &bull; 
+                        Supplier: <strong>{{ order.listing.supplier.company_name }}</strong> ({{ order.listing.location }})
+                    </div>
+                </div>
+
+                <div style="text-align: right;">
+                    <div class="mono" style="font-size: 1.25rem; font-weight: 700; color: var(--slate-950);">
+                        ₹{{ order.total_cost|floatformat:2 }}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--slate-500);">
+                        Material ₹{{ order.subtotal|floatformat:2 }} + Freight ₹{{ order.estimated_freight|floatformat:2 }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Amazon / Flipkart Style 4-Stage Stepper -->
+            <div class="tracking-stepper">
+                <div class="tracking-stepper-progress" style="width: {% if order.status == 'pending' %}25%{% elif order.status == 'accepted' %}75%{% elif order.delivery_status == 'delivered' %}100%{% else %}15%{% endif %};"></div>
+
+                <!-- Step 1: Order Placed & Escrow Held -->
+                <div class="step-node completed">
+                    <div class="step-circle">&check;</div>
+                    <div class="step-title">Order Transmitted</div>
+                    <div class="step-subtitle">{{ order.created_at|date:"d M, H:i" }} &bull; Escrow Held</div>
+                </div>
+
+                <!-- Step 2: Supplier Dispatch Confirmation -->
+                <div class="step-node {% if order.status == 'accepted' or order.delivery_status == 'in_transit' or order.delivery_status == 'delivered' %}completed{% elif order.status == 'pending' %}active{% else %}blocked{% endif %}">
+                    <div class="step-circle">{% if order.status == 'accepted' or order.delivery_status == 'in_transit' or order.delivery_status == 'delivered' %}&check;{% elif order.status == 'rejected' %}&times;{% else %}⏳{% endif %}</div>
+                    <div class="step-title">Supplier Dispatch</div>
+                    <div class="step-subtitle">{% if order.status == 'accepted' %}Released to Supplier{% elif order.status == 'rejected' %}Declined{% else %}Awaiting Approval{% endif %}</div>
+                </div>
+
+                <!-- Step 3: In Transit Highway Corridor -->
+                <div class="step-node {% if order.status == 'accepted' and order.delivery_status != 'delivered' %}active{% elif order.delivery_status == 'delivered' %}completed{% endif %}">
+                    <div class="step-circle">🚛</div>
+                    <div class="step-title" style="{% if order.status == 'accepted' %}color: var(--amber);{% endif %}">Corridor Transit</div>
+                    <div class="step-subtitle">{% if order.status == 'accepted' %}ETA: {{ order.eta_hours|default:"3.5 Hours" }}{% else %}Awaiting Dispatch{% endif %}</div>
+                </div>
+
+                <!-- Step 4: Facility Delivery -->
+                <div class="step-node {% if order.delivery_status == 'delivered' %}completed{% endif %}">
+                    <div class="step-circle">🏭</div>
+                    <div class="step-title">Destination Delivery</div>
+                    <div class="step-subtitle">Gate In &amp; Weighbridge</div>
+                </div>
+            </div>
+
+            <!-- Live Freight Details & Kerala Corridor Telemetry -->
+            <div class="logistics-grid">
+                <div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                        <div class="info-group">
+                            <div class="info-label">Current Vehicle Telemetry</div>
+                            <div class="info-val mono" style="font-weight:600; color:var(--emerald-dark);">
+                                {{ order.vehicle_number|default:"KL-07-BW-4921 (20t Closed Bulk Truck)" }}
+                            </div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Driver Hotline &amp; Logistics Desk</div>
+                            <div class="info-val mono">
+                                {{ order.driver_contact|default:"+91 98460 22100 (Kerala Freight Line)" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div class="info-group">
+                            <div class="info-label">Origin Facility</div>
+                            <div class="info-val">
+                                {{ order.origin_facility|default:order.listing.location }}
+                            </div>
+                        </div>
+                        <div class="info-group">
+                            <div class="info-label">Destination Facility</div>
+                            <div class="info-val">
+                                {{ order.destination_facility|default:"Kerala Industrial Growth Centre, Palakkad" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 10px; font-size: 0.78rem; color: var(--slate-700); background: #ffffff; border: 1px solid var(--slate-200); border-radius: 4px; padding: 8px 12px; display: flex; align-items: center; gap: 8px;">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--emerald); animation:pulse 1.5s infinite;"></span>
+                        <span><strong>Live Transit Location:</strong> {{ order.current_location|default:"NH 544 Aluva Bypass, En route to Palakkad Industrial Corridor" }}</span>
+                    </div>
+                </div>
+
+                <!-- Cost Breakdown & Guarantee -->
+                <div style="background: #ffffff; border: 1px solid var(--slate-200); border-radius: 4px; padding: 14px;">
+                    <div class="info-label" style="margin-bottom: 8px;">Logistics Cost Breakdown</div>
+                    
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                        <span style="color: var(--slate-600);">Material Volume ({{ order.volume_requested }}t)</span>
+                        <span class="mono">₹{{ order.subtotal|floatformat:2 }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                        <span style="color: var(--slate-600);">Base Dispatch &amp; Weighment</span>
+                        <span class="mono">₹1,500.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                        <span style="color: var(--slate-600);">Paliakkara Toll &amp; Checkpoint Clearance</span>
+                        <span class="mono">₹{{ order.checkpoint_toll|default:"450.00"|floatformat:2 }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 8px;">
+                        <span style="color: var(--slate-600);">Corridor Freight ({{ order.estimated_distance_km }} km @ ₹3.20/t-km)</span>
+                        <span class="mono">₹{{ order.estimated_freight|floatformat:2 }}</span>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--slate-200); padding-top: 8px; display: flex; justify-content: space-between; font-weight: 700; font-size: 0.95rem;">
+                        <span>Total Payable</span>
+                        <span class="mono" style="color: var(--emerald-dark);">₹{{ order.total_cost|floatformat:2 }}</span>
+                    </div>
+
+                    {% if order.listing.quality_certificate %}
+                    <div style="margin-top: 12px; border-top: 1px dashed var(--slate-200); padding-top: 8px;">
+                        <a href="{{ order.listing.quality_certificate.url }}" target="_blank" class="btn btn-outline btn-sm btn-block" style="font-size: 0.72rem; color: var(--emerald-dark); border-color: #bbf7d0;">
+                            📄 Download Supplier Lab Assay
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+        {% endfor %}
+
+    {% else %}
+        <div class="panel" style="text-align: center; padding: 60px 20px;">
+            <div style="font-size: 3rem; margin-bottom: 12px;">📦</div>
+            <h3 style="font-size: 1.2rem; margin-bottom: 8px;">No Consignments in Transit</h3>
+            <p style="color: var(--slate-500); font-size: 0.88rem; max-width: 500px; margin: 0 auto 20px;">
+                You haven't placed any byproduct procurement requests yet. Explore the Kerala Industrial Corridor marketplace to order verified secondary raw materials.
+            </p>
+            <a href="{% url 'index' %}" class="btn btn-primary">Browse Kerala Circular Marketplace</a>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

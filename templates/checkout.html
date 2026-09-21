@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Multi-Supplier Batch Cart &amp; Aggregation Pool — Circular Waste Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Multi-Supplier Batch Cart &amp; Quantity Aggregator</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'index' %}">Marketplace</a> / Multi-Supplier Procurement Consolidation
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'index' %}" class="btn btn-outline btn-sm">+ Add More Suppliers</a>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Steps Header -->
+<div class="wrap" style="padding-top: 14px; margin-bottom: 20px;">
+    <div style="display: flex; gap: 12px; border-bottom: 2px solid var(--slate-200); padding-bottom: 12px;">
+        <div style="font-size: 0.82rem; font-weight: 700; color: var(--emerald-dark); display: flex; align-items: center; gap: 6px;">
+            <span class="mono" style="background: var(--emerald); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">1</span>
+            Supply Aggregation &amp; Pool Matching
+        </div>
+        <div style="font-size: 0.82rem; color: var(--slate-500); display: flex; align-items: center; gap: 6px;">
+            <span class="mono" style="background: var(--slate-200); color: var(--slate-700); width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">2</span>
+            Corridor Freight &amp; Route Preview
+        </div>
+        <div style="font-size: 0.82rem; color: var(--slate-500); display: flex; align-items: center; gap: 6px;">
+            <span class="mono" style="background: var(--slate-200); color: var(--slate-700); width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">3</span>
+            Permit Verification &amp; Order Execution
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; padding-bottom: 60px;">
+    
+    <!-- Left Column: Aggregator Progress & Stream Items -->
+    <div>
+        <!-- Innovation Feature: Multi-Supplier Quantity Aggregator Progress Bar -->
+        <div class="panel" style="margin-bottom: 20px; border-left: 4px solid var(--emerald); background: #fdfefe;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                <div>
+                    <h3 style="margin: 0; color: var(--slate-950);">Buyer Target Aggregation Progress</h3>
+                    <span style="font-size: 0.78rem; color: var(--slate-500);">Target Resource: <strong>{{ summary.target_material }}</strong></span>
+                </div>
+                <div>
+                    {% if summary.is_fully_filled %}
+                        <span class="status-pill ok" style="font-size: 0.8rem; padding: 4px 10px;">&check; 100% Target Met</span>
+                    {% else %}
+                        <span class="status-pill pending" style="font-size: 0.8rem; padding: 4px 10px;">{{ summary.progress_pct }}% Pool Filled</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- CSS Progress Bar -->
+            <div style="height: 12px; border-radius: 6px; background: var(--slate-200); overflow: hidden; margin: 12px 0 8px;">
+                <div style="height: 100%; width: {{ summary.progress_pct }}%; background: var(--emerald); transition: width 0.3s ease;"></div>
+            </div>
+
+            <!-- Mathematical breakdown display -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; text-align: center; background: #fff; padding: 12px; border: 1px solid var(--slate-200); border-radius: var(--radius);">
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--slate-500);">Target Requirement</div>
+                    <div class="mono" style="font-size: 1.15rem; font-weight: 700; color: var(--slate-950);">{{ summary.target_tons|floatformat:0 }} t</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--slate-500);">Collected Quantity</div>
+                    <div class="mono" style="font-size: 1.15rem; font-weight: 700; color: var(--emerald-dark);">{{ summary.collected_tons|floatformat:0 }} t</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--slate-500);">Remaining Volume</div>
+                    <div class="mono" style="font-size: 1.15rem; font-weight: 700; color: {% if summary.remaining_tons > 0 %}var(--amber){% else %}var(--emerald-dark){% endif %};">
+                        {{ summary.remaining_tons|floatformat:0 }} t
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: 0.72rem; color: var(--slate-500);">Aggregation Progress</div>
+                    <div class="mono" style="font-size: 1.15rem; font-weight: 700; color: var(--emerald-dark);">{{ summary.progress_pct }}%</div>
+                </div>
+            </div>
+
+            <!-- Target Adjustment Quick Form -->
+            <form method="POST" action="{% url 'cart_view' %}" style="display: flex; gap: 8px; align-items: center; margin-top: 14px;">
+                {% csrf_token %}
+                <span style="font-size: 0.78rem; color: var(--slate-500);">Adjust Target Requirement (Tons):</span>
+                <input type="number" name="target_volume_tons" value="{{ summary.target_tons|floatformat:0 }}" min="10" max="10000" class="mono" style="width: 100px; padding: 4px 8px; border: 1px solid var(--slate-300); border-radius: var(--radius); font-size: 0.85rem;">
+                <button type="submit" name="update_target" value="1" class="btn btn-outline btn-sm">Update Target</button>
+            </form>
+        </div>
+
+        <!-- Contributing Suppliers Table -->
+        <div class="panel" style="margin-bottom: 20px;">
+            <h3>Contributing Material Batches</h3>
+            
+            {% if summary.items %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Material Stream</th>
+                        <th>Supplier Enterprise</th>
+                        <th class="mono">Tonnage Allocated</th>
+                        <th class="mono">Price / Ton</th>
+                        <th class="mono">Subtotal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in summary.items %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.material_name }}</strong><br>
+                            <span class="mono" style="font-size: 0.72rem; color: var(--slate-500);">Batch #{{ item.batch_id }}</span>
+                        </td>
+                        <td>
+                            {{ item.supplier_name }}<br>
+                            <span style="font-size: 0.72rem; color: var(--slate-500);">{{ item.location }}</span>
+                        </td>
+                        <td class="mono"><strong>{{ item.volume_tons }} t</strong></td>
+                        <td class="mono">₹{{ item.price_per_ton|floatformat:0 }}</td>
+                        <td class="mono" style="font-weight: 600;">₹{{ item.subtotal|floatformat:0 }}</td>
+                        <td>
+                            <a href="{% url 'cart_remove' pk=item.listing_id %}" style="color: var(--danger); font-size: 0.85rem; font-weight: 700;" title="Remove from batch cart">&times;</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="text-align: center; padding: 30px; color: var(--slate-500);">
+                Your batch cart is currently empty. 
+                <a href="{% url 'index' %}" style="color: var(--emerald); font-weight: 600;">Browse material streams &rarr;</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- High-Fidelity Transportation & Route Map Placeholder -->
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                <h3 style="margin: 0;">Corridor Freight Distance &amp; Route Logistics</h3>
+                <span class="mono" style="font-size: 0.72rem; color: var(--emerald-dark);">&bull; OpenStreetMap Routing Protocol Ready</span>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--slate-500); margin-bottom: 12px;">
+                Kerala Industrial Logistics Corridor: Kottayam Rubber Belt &rarr; Kochi Petrochemical Hub &rarr; Palakkad KINFRA Corridor.
+            </p>
+
+            <!-- Route Map Visual Placeholder Frame -->
+            <div style="aspect-ratio: 16/7; background: repeating-linear-gradient(45deg, #e5e7eb, #e5e7eb 10px, #eceef1 10px, #eceef1 20px); border-radius: var(--radius); border: 1px solid var(--slate-200); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 20px;">
+                <div class="mono" style="font-size: 0.85rem; font-weight: 700; color: var(--slate-800); background: rgba(255,255,255,0.9); padding: 5px 12px; border-radius: var(--radius); border: 1px solid var(--slate-300);">
+                    Consolidated Highway Corridor: Kottayam &rarr; Kochi &rarr; Palakkad (NH 544) &bull; 142 km
+                </div>
+                <div style="font-size: 0.75rem; color: var(--slate-500);">
+                    Fleet Allocation: 20t Heavy Duty Closed Bulk Carrier &bull; Estimated Transit: 3.5 hrs (via Paliakkara Toll)
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--slate-500); display: block;">Consolidated Origin Hub</label>
+                    <input type="text" value="Kochi Logistics Hub, Kerala" readonly class="form-control" style="background: #f8fafc; font-size: 0.82rem;">
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--slate-500); display: block;">Destination Facility</label>
+                    <input type="text" value="KINFRA Integrated Industrial Park, Palakkad, Kerala" class="form-control" style="font-size: 0.82rem;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Summary Card & Order Execution -->
+    <aside class="panel" style="position: sticky; top: 75px;">
+        <h3>Procurement Summary</h3>
+        
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--slate-200); font-size: 0.85rem;">
+            <span>Total Collected Tonnage</span>
+            <span class="mono"><strong>{{ summary.collected_tons|floatformat:0 }} t</strong></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--slate-200); font-size: 0.85rem;">
+            <span>Contributing Suppliers</span>
+            <span class="mono">{{ summary.items_count }} Factories</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--slate-200); font-size: 0.85rem;">
+            <span>Byproduct Material Cost</span>
+            <span class="mono">₹{{ summary.material_cost|floatformat:0 }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--slate-200); font-size: 0.85rem;">
+            <span>Consolidated Freight (178 km)</span>
+            <span class="mono">₹{{ summary.freight_cost|floatformat:0 }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--slate-200); font-size: 0.85rem;">
+            <span>Platform Verification &amp; ESCROW</span>
+            <span class="mono">₹{{ summary.platform_fee|floatformat:0 }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 4px; border-top: 1px solid var(--slate-200); font-weight: 700; font-size: 1.05rem;">
+            <span>Total Estimated Cost</span>
+            <span class="mono" style="color: var(--slate-950);">₹{{ summary.total_cost|floatformat:0 }}</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; background: var(--emerald-tint); border: 1px solid #bbf7d0; color: var(--emerald-dark); font-size: 0.78rem; padding: 10px; border-radius: var(--radius); margin: 14px 0;">
+            <span>&check;</span>
+            <div>All batches from Green Permit Verified industrial suppliers</div>
+        </div>
+
+        {% if summary.items %}
+            <a href="{% url 'cart_checkout' %}" class="btn btn-primary btn-block" style="padding: 12px; font-size: 0.9rem;">
+                Execute Multi-Supplier Requisition
+            </a>
+        {% else %}
+            <button disabled class="btn btn-outline btn-block" style="padding: 12px; opacity: 0.5;">
+                Batch Cart Empty
+            </button>
+        {% endif %}
+
+        <a href="{% url 'index' %}" class="btn btn-outline btn-block" style="margin-top: 8px; font-size: 0.8rem;">
+            Continue Sourcing Streams
+        </a>
+    </aside>
+
+</div>
+
+<style>
+    .form-control {
+        width: 100%;
+        padding: 7px 10px;
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+    }
+</style>
+{% endblock %}

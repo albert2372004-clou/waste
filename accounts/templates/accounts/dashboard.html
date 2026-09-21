@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.company_name }} — Company Account Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">{{ company.company_name }}</h1>
+            <div class="breadcrumb">
+                Registration No: <span class="mono">{{ company.registration_number }}</span> &bull; 
+                Role: <strong>{{ company.get_user_type_display }}</strong>
+            </div>
+        </div>
+        <div>
+            {% if company.verification_status == 'verified' or company.verification_status == 'auto_verified' or company.verification_status == 'manual_approved' %}
+                <span class="status-pill ok">Verified Company</span>
+            {% elif company.verification_status == 'pending' %}
+                <span class="status-pill pending">Pending Verification</span>
+            {% else %}
+                <span class="status-pill block">{{ company.get_verification_status_display }}</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px;">
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+        <div class="panel">
+            <h3>Company Credentials &amp; Verification Details</h3>
+            <table>
+                <tbody>
+                    <tr>
+                        <th style="width: 200px;">Company Legal Name</th>
+                        <td>{{ company.company_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>Registration Number</th>
+                        <td class="mono">{{ company.registration_number }}</td>
+                    </tr>
+                    <tr>
+                        <th>GSTIN Identification</th>
+                        <td class="mono">{{ company.gstin }}</td>
+                    </tr>
+                    <tr>
+                        <th>Authorized Person</th>
+                        <td>{{ company.authorized_person }}</td>
+                    </tr>
+                    <tr>
+                        <th>Contact Phone</th>
+                        <td class="mono">{{ company.phone }}</td>
+                    </tr>
+                    <tr>
+                        <th>Facility / Registered Address</th>
+                        <td>{{ company.address }}</td>
+                    </tr>
+                    <tr>
+                        <th>Account Role</th>
+                        <td><strong>{{ company.get_user_type_display }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Verification Status</th>
+                        <td>
+                            {% if company.verification_status == 'verified' or company.verification_status == 'auto_verified' or company.verification_status == 'manual_approved' %}
+                                <span class="status-pill ok">Verified &bull; Active Marketplace Access</span>
+                            {% elif company.verification_status == 'pending' %}
+                                <span class="status-pill pending">Pending Administrator Verification</span>
+                            {% else %}
+                                <span class="status-pill block">{{ company.get_verification_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Registered Date</th>
+                        <td class="mono">{{ company.created_at|date:"d M Y, H:i" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div>
+            <div class="panel">
+                <h3>Quick Navigation</h3>
+                <p style="font-size: 0.82rem; color: var(--slate-500); margin-bottom: 14px;">
+                    Role-specific actions for your authenticated account:
+                </p>
+
+                {% if company.user_type == 'supplier' %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">
+                        Open Supplier Dashboard
+                    </a>
+                {% endif %}
+
+                <a href="{% url 'index' %}" class="btn btn-outline btn-block" style="margin-bottom: 10px;">
+                    Browse Material Marketplace
+                </a>
+
+                {% if request.user.is_superuser or request.user.is_staff %}
+                    <a href="{% url 'verification_panel' %}" class="btn btn-amber btn-block" style="margin-bottom: 10px;">
+                        Open Verification Control Panel
+                    </a>
+                {% endif %}
+
+                <a href="{% url 'logout' %}" class="btn btn-outline btn-block" style="color: var(--danger); border-color: #fca5a5;">
+                    Sign Out
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

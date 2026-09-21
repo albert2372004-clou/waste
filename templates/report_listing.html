@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Report Listing — Circular Waste Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Report Inaccurate or Suspicious Material Stream</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'index' %}">Marketplace</a> / 
+                <a href="{% url 'product_detail' listing.pk %}">{{ listing.material_name }}</a> / 
+                Report Stream
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'product_detail' listing.pk %}" class="btn btn-outline btn-sm">&larr; Back to Listing</a>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="max-width: 720px; padding: 20px 24px 60px;">
+    <div class="panel" style="border-top: 4px solid var(--danger);">
+        <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--slate-200);">
+            <div style="font-size: 2.2rem;">🚩</div>
+            <div>
+                <h3 style="margin-bottom: 4px;">{{ listing.material_name }}</h3>
+                <div style="font-size: 0.8rem; color: var(--slate-600);">
+                    Batch #{{ listing.batch_id }} &bull; Supplier: <strong>{{ listing.supplier.company_name }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 20px; line-height: 1.5;">
+            Our automated consistency checks and platform administrators investigate all reported listings to protect industrial buyers from counterfeit photos, misleading purity values, or unauthorized waste streams.
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+
+            <div style="margin-bottom: 18px;">
+                <label style="display: block; font-weight: 600; font-size: 0.82rem; margin-bottom: 6px;">Reason for Report *</label>
+                {{ form.reason }}
+                {% if form.reason.errors %}
+                    <div style="color: var(--danger); font-size: 0.75rem; margin-top: 3px;">{{ form.reason.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-weight: 600; font-size: 0.82rem; margin-bottom: 6px;">Detailed Explanation / Observations *</label>
+                {{ form.description }}
+                <span style="font-size: 0.72rem; color: var(--slate-500);">Provide specific details (e.g. image belongs to a different plastic category, laboratory certificate ID mismatch, etc.)</span>
+                {% if form.description.errors %}
+                    <div style="color: var(--danger); font-size: 0.75rem; margin-top: 3px;">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button type="submit" class="btn btn-danger" style="padding: 10px 20px;">
+                    Submit Report to Admin
+                </button>
+                <a href="{% url 'product_detail' listing.pk %}" class="btn btn-outline" style="padding: 10px 18px;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .form-control {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.85rem;
+        background: #fff;
+    }
+    .form-control:focus {
+        outline: 2px solid var(--danger);
+        border-color: var(--danger);
+    }
+</style>
+{% endblock %}
