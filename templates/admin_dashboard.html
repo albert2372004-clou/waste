@@ -136,13 +136,13 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Photo</th>
                         <th>Stream / Material</th>
                         <th class="mono">Batch ID</th>
                         <th>Supplier</th>
                         <th class="mono">Volume</th>
                         <th class="mono">Price</th>
-                        <th class="mono">Purity</th>
-                        <th>Consistency Check</th>
+                        <th>CV Image Verification</th>
                         <th>Review Actions</th>
                     </tr>
                 </thead>
@@ -150,32 +150,54 @@
                     {% for p_listing in pending_listings %}
                     <tr>
                         <td>
+                            {% if p_listing.image %}
+                            <a href="{{ p_listing.image.url }}" target="_blank">
+                                <img src="{{ p_listing.image.url }}" alt="Waste photo" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
+                            </a>
+                            {% else %}
+                            <span style="font-size: 0.7rem; color: var(--slate-400);">No photo</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <strong>{{ p_listing.material_name }}</strong><br>
-                            <span class="tag" style="font-size: 0.68rem;">{{ p_listing.get_category_display }}</span>
+                            <span class="tag" style="font-size: 0.68rem;">Selected: {{ p_listing.get_category_display }}</span>
                         </td>
                         <td class="mono" style="font-size: 0.8rem;">#{{ p_listing.batch_id }}</td>
                         <td>{{ p_listing.supplier.company_name }}</td>
                         <td class="mono">{{ p_listing.volume_tons }} {{ p_listing.quantity_unit|default:"t" }}</td>
                         <td class="mono">₹{{ p_listing.price_per_ton|floatformat:0 }}</td>
-                        <td class="mono">{{ p_listing.purity_percent }}%</td>
                         <td>
-                            {% if p_listing.mismatch_warning %}
-                                <span style="font-size: 0.75rem; color: var(--danger); font-weight: 600;">
-                                    ⚠️ {{ p_listing.mismatch_warning }}
+                            <div style="display: flex; flex-direction: column; gap: 3px;">
+                                {% if p_listing.image_verification_status == "Likely Match" %}
+                                <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block; width: fit-content;">
+                                    &check; Likely Match ({{ p_listing.image_verification_score|floatformat:0 }}%)
                                 </span>
-                            {% else %}
-                                <span style="font-size: 0.75rem; color: var(--emerald-dark); font-weight: 600;">
-                                    &check; Consistent
+                                {% elif p_listing.image_verification_status == "Possible Mismatch" %}
+                                <span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block; width: fit-content;">
+                                    ⚠ Possible Mismatch ({{ p_listing.image_verification_score|floatformat:0 }}%)
                                 </span>
-                            {% endif %}
+                                {% else %}
+                                <span style="background: #f59e0b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; display: inline-block; width: fit-content;">
+                                    ℹ Manual Review ({{ p_listing.image_verification_score|floatformat:0 }}%)
+                                </span>
+                                {% endif %}
+                                {% if p_listing.image_detected_category %}
+                                <span style="font-size: 0.72rem; color: var(--slate-500);">
+                                    Detected: <strong>{{ p_listing.image_detected_category }}</strong>
+                                </span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td>
-                            <form method="POST" style="display: flex; gap: 6px; margin: 0;">
+                            <form method="POST" style="display: flex; gap: 6px; margin: 0; flex-wrap: wrap;">
                                 {% csrf_token %}
                                 <input type="hidden" name="review_listing" value="1">
                                 <input type="hidden" name="listing_id" value="{{ p_listing.id }}">
                                 <button type="submit" name="listing_action" value="approve" class="btn btn-primary btn-sm" style="font-size: 0.75rem;">
                                     Approve &amp; Publish
+                                </button>
+                                <button type="submit" name="listing_action" value="manual_review" class="btn btn-sm" style="font-size: 0.75rem; background: #f59e0b; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer;">
+                                    Manual Review
                                 </button>
                                 <button type="submit" name="listing_action" value="reject" class="btn btn-danger btn-sm" style="font-size: 0.75rem;">
                                     Reject
@@ -193,6 +215,53 @@
         {% else %}
         <div style="text-align: center; color: var(--slate-500); padding: 20px;">
             &check; All submitted waste streams have been reviewed! No listings currently pending.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Section: Circular Innovation Fund Pledges & Backers -->
+    <div class="panel" style="margin-bottom: 24px; border-top: 4px solid var(--emerald);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div>
+                <h3 style="margin-bottom: 2px;">🌱 Circular Innovation Fund &amp; Enterprise Backers</h3>
+                <p style="font-size: 0.8rem; color: var(--slate-500); margin: 0;">
+                    Transparent ledger of micro-grants and co-investments pledged by verified enterprises across Kerala.
+                </p>
+            </div>
+            <a href="{% url 'funding_list' %}" class="btn btn-outline btn-sm">Public Fund View &rarr;</a>
+        </div>
+
+        {% if all_pledges %}
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Backer Enterprise</th>
+                        <th>Project Supported</th>
+                        <th class="mono">Amount Pledged</th>
+                        <th>Investor Benefit Tier</th>
+                        <th>Date Recorded</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pledge in all_pledges %}
+                    <tr>
+                        <td>
+                            <strong>{{ pledge.investor_name|default:pledge.contributor.username }}</strong><br>
+                            <span class="mono" style="font-size: 0.72rem; color: var(--slate-500);">User: {{ pledge.contributor.username }}</span>
+                        </td>
+                        <td>{{ pledge.project.title }}</td>
+                        <td class="mono font-bold" style="color: var(--emerald-dark);">₹{{ pledge.amount|floatformat:0 }}</td>
+                        <td><span class="tag verified">{{ pledge.get_benefit_tier_display }}</span></td>
+                        <td class="mono" style="font-size: 0.75rem;">{{ pledge.created_at|date:"M d, Y H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--slate-500); padding: 20px;">
+            No pledges recorded yet. Pledges made on the public funding page will appear here.
         </div>
         {% endif %}
     </div>

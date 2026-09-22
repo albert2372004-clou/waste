@@ -155,26 +155,28 @@ class MaterialListingForm(forms.ModelForm):
                 if moisture is not None and float(moisture) > 20.0:
                     self.add_error('moisture_percent', 'Marine fish scales moisture exceeds 20%. Descaled byproduct must be solar/kiln dried before transit.')
 
-        # 5. Strict Consistency Checking: Category vs Material Name vs Image vs Certificate
+        # 5. Consistency Checking & Preliminary Computer Vision Image Verification
         mat_name = cleaned_data.get('material_name', '')
         img_obj = cleaned_data.get('image')
-        img_fname = img_obj.name if img_obj else ""
         cert_obj = cleaned_data.get('quality_certificate')
         cert_fname = cert_obj.name if cert_obj else ""
 
         if category and mat_name:
-            consistency = check_material_consistency(category, mat_name, img_fname)
+            consistency = check_material_consistency(category, mat_name, "")
             if not consistency['is_consistent']:
                 if consistency['name_conflict']:
                     self.add_error(
                         'material_name',
                         f"Category Conflict: Material title references '{consistency['name_conflict']}' which does not match selected stream '{category.capitalize()}'. Listing blocked."
                     )
-                if consistency['image_conflict']:
-                    self.add_error(
-                        'image',
-                        f"Image Conflict: Uploaded photo '{img_fname}' references '{consistency['image_conflict']}' which does not match selected stream '{category.capitalize()}'. Listing blocked."
-                    )
+
+        # Content-based preliminary image verification (Never blocks listing submission)
+        if img_obj and category:
+            from .services.image_verifier import verify_waste_image
+            v_res = verify_waste_image(img_obj, category)
+            self.image_verification_result = v_res
+            if v_res.get('is_mismatch'):
+                cleaned_data['mismatch_warning'] = v_res['message']
 
         # 6. Quality Certificate Lab Assay vs Declared Purity Validation
         if cert_obj and purity is not None:
@@ -195,6 +197,18 @@ class MaterialListingForm(forms.ModelForm):
                     )
 
         return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if hasattr(self, 'image_verification_result') and self.image_verification_result:
+            instance.image_verification_status = self.image_verification_result['status']
+            instance.image_verification_score = self.image_verification_result['score']
+            instance.image_detected_category = self.image_verification_result['detected_category']
+            instance.use_category_symbol = self.image_verification_result.get('is_mismatch', False)
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 class ReportedListingForm(forms.ModelForm):

@@ -36,4 +36,19 @@ urlpatterns = [
         views.dashboard,
         name='dashboard'
     ),
+    path(
+        'forgot-password/',
+        views.forgot_password,
+        name='forgot_password'
+    ),
+    path(
+        'reset-password-otp/',
+        views.reset_password_otp,
+        name='reset_password_otp'
+    ),
+    path(
+        'profile/',
+        views.profile_view,
+        name='profile'
+    ),
 ]

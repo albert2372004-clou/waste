@@ -135,8 +135,16 @@
                 <div style="margin-bottom: 16px;">
                     <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Primary Material Image * (Compulsory)</label>
                     {{ form.image }}
-                    <span style="font-size:0.72rem; color:var(--slate-500);">Upload high-resolution authentic photo of the waste stream (.jpg, .png, .webp). Mismatched images will be flagged by automated check.</span>
+                    <span style="font-size:0.72rem; color:var(--slate-500);">Upload authentic photo of the waste stream (.jpg, .png, .webp). Automated computer vision analyzes image content; verification never blocks listing submission.</span>
                     {% if form.image.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.image.errors }}</div>{% endif %}
+
+                    {% if is_edit and listing and listing.image_verification_status %}
+                    <div style="margin-top: 8px; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; background: {% if listing.image_verification_status == 'Likely Match' %}#ecfdf5; border: 1px solid #a7f3d0; color: #065f46;{% elif listing.image_verification_status == 'Possible Mismatch' %}#fef2f2; border: 1px solid #fecaca; color: #991b1b;{% else %}#fffbeb; border: 1px solid #fde68a; color: #92400e;{% endif %}">
+                        <strong>Image Verification Status:</strong>
+                        <span>{{ listing.image_verification_status }} ({{ listing.image_verification_score|floatformat:0 }}%)</span>
+                        {% if listing.image_detected_category %} &bull; Detected as: <strong>{{ listing.image_detected_category }}</strong>{% endif %}
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div style="margin-bottom: 16px;">

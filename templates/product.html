@@ -24,24 +24,26 @@
     <div>
         <!-- Main Big Preview Image -->
         <div style="aspect-ratio: 4/3; border-radius: var(--radius); border: 2px solid var(--slate-200); overflow: hidden; margin-bottom: 12px; background: #0f172a; box-shadow: 0 8px 24px rgba(15,23,42,0.1); position: relative;">
-            {% if listing.image %}
+            {% if listing.image and not listing.use_category_symbol %}
                 <img id="main-product-image" src="{{ listing.image.url }}" alt="{{ listing.material_name }}" style="width: 100%; height: 100%; object-fit: cover; transition: opacity 0.25s ease, transform 0.3s ease;">
             {% else %}
                 <div id="main-fallback-visual" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
-                    <div style="font-size: 3.5rem; margin-bottom: 6px;">
-                        {% if listing.category == 'rubber' %}🛞{% elif listing.category == 'textile' %}🧵{% elif listing.category == 'coconut' %}🥥{% elif listing.category == 'plastic' %}🧪{% elif listing.category == 'fish' %}🐟{% else %}📦{% endif %}
+                    <div style="font-size: 4rem; margin-bottom: 6px;">
+                        {{ listing.category_symbol }}
                     </div>
                     <span class="mono" style="font-size: 0.82rem; background: rgba(255,255,255,0.1); padding: 4px 12px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.15);">
                         Batch #{{ listing.batch_id }}
                     </span>
-                    <span style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">Kerala Secondary Raw Material Stream</span>
+                    <span style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">
+                        {% if listing.use_category_symbol %}⚡ Official Category Symbol (Automated Symbol Override){% else %}Kerala Secondary Raw Material Stream{% endif %}
+                    </span>
                 </div>
                 <img id="main-product-image" src="" alt="{{ listing.material_name }}" style="width: 100%; height: 100%; object-fit: cover; display: none; transition: opacity 0.25s ease;">
             {% endif %}
 
             <!-- View Label Overlay -->
             <span id="main-image-label" class="mono" style="position: absolute; bottom: 10px; left: 10px; background: rgba(15,23,42,0.85); color: #fff; font-size: 0.72rem; padding: 3px 8px; border-radius: var(--radius); backdrop-filter: blur(4px);">
-                📷 Primary Batch Lot View
+                {% if listing.use_category_symbol %}⚡ Official Category Symbol{% else %}📷 Primary Batch Lot View{% endif %}
             </span>
             <span style="position: absolute; top: 10px; left: 10px; background: var(--emerald); color: #fff; font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: var(--radius); text-transform: uppercase;">
                 Click Swatch To Inspect
@@ -50,13 +52,13 @@
 
         <!-- Flipkart / Amazon Style Thumbnail Swatches -->
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px;">
-            <!-- Swatch 1: Primary Stream View -->
-            <div class="thumb-swatch active" onmouseover="swapProductImage('{% if listing.image %}{{ listing.image.url }}{% endif %}', '📷 Primary Batch Lot View', this)" onclick="swapProductImage('{% if listing.image %}{{ listing.image.url }}{% endif %}', '📷 Primary Batch Lot View', this)" style="aspect-ratio: 1; border-radius: 4px; border: 2px solid var(--emerald); cursor: pointer; overflow: hidden; background: #1e293b; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.65rem; color: #cbd5e1; text-align: center; padding: 2px; transition: all 0.2s;">
-                {% if listing.image %}
+            <!-- Swatch 1: Primary Stream View or Category Symbol -->
+            <div class="thumb-swatch active" onmouseover="swapProductImage('{% if listing.image and not listing.use_category_symbol %}{{ listing.image.url }}{% endif %}', '{% if listing.use_category_symbol %}⚡ Official Stream Symbol{% else %}📷 Primary Batch Lot View{% endif %}', this)" onclick="swapProductImage('{% if listing.image and not listing.use_category_symbol %}{{ listing.image.url }}{% endif %}', '{% if listing.use_category_symbol %}⚡ Official Stream Symbol{% else %}📷 Primary Batch Lot View{% endif %}', this)" style="aspect-ratio: 1; border-radius: 4px; border: 2px solid var(--emerald); cursor: pointer; overflow: hidden; background: #1e293b; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.65rem; color: #cbd5e1; text-align: center; padding: 2px; transition: all 0.2s;">
+                {% if listing.image and not listing.use_category_symbol %}
                     <img src="{{ listing.image.url }}" alt="{{ listing.material_name }}" style="width: 100%; height: 100%; object-fit: cover;">
                 {% else %}
-                    <span style="font-size: 1.2rem;">{% if listing.category == 'rubber' %}🛞{% elif listing.category == 'textile' %}🧵{% elif listing.category == 'coconut' %}🥥{% elif listing.category == 'plastic' %}🧪{% else %}📦{% endif %}</span>
-                    <span style="font-weight: 600;">Main View</span>
+                    <span style="font-size: 1.5rem;">{{ listing.category_symbol }}</span>
+                    <span style="font-weight: 600;">Symbol</span>
                 {% endif %}
             </div>
 
@@ -92,6 +94,14 @@
                     <div class="mono" style="font-size: 0.7rem; color: #2563eb; margin-top: 3px;">
                         Accreditation: <strong>{{ listing.lab_accreditation_number|default:"NABL-KL-2026/TC-8812" }}</strong>
                     </div>
+                    {% if listing.image_verification_status %}
+                    <div style="margin-top: 6px; display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.72rem; color: var(--slate-600);">Visual Match:</span>
+                        <span style="background-color: {{ listing.verification_badge_color }}; color: white; padding: 2px 8px; border-radius: 10px; font-weight: 700; font-size: 0.68rem;">
+                            {{ listing.image_verification_status }} ({{ listing.verification_score_display }})
+                        </span>
+                    </div>
+                    {% endif %}
                 </div>
                 <span class="status-pill ok" style="font-size: 0.65rem;">
                     {{ listing.get_lab_audit_status_display|default:"Audited & Verified" }}
@@ -255,14 +265,20 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block" style="margin-bottom: 8px; padding: 11px;">
-                    Send Direct Procurement Request
-                </button>
-            </form>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button type="submit" class="btn btn-primary btn-block" style="padding: 11px;">
+                        ⚡ Send Direct Procurement Request
+                    </button>
 
-            <a href="{% url 'cart_add' pk=listing.pk %}" class="btn btn-amber btn-block" style="padding: 10px; font-size: 0.82rem;">
-                + Add to Multi-Supplier Batch Cart
-            </a>
+                    <button type="submit" formaction="{% url 'standard_cart_add' pk=listing.pk %}" class="btn btn-outline btn-block" style="padding: 10px; font-size: 0.84rem; background: #fff; border: 1px solid var(--emerald); color: var(--emerald-dark); font-weight: 600;">
+                        🛒 Add to Normal Shopping Cart (Flipkart Style)
+                    </button>
+
+                    <button type="submit" formaction="{% url 'cart_add' pk=listing.pk %}" class="btn btn-amber btn-block" style="padding: 10px; font-size: 0.84rem;">
+                        ⚡ Add to Multi-Supplier Batch Cart (Bulk Pool)
+                    </button>
+                </div>
+            </form>
         {% endif %}
     </div>
 

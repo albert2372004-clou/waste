@@ -291,13 +291,13 @@ class MarketplaceCoreEngineTests(TestCase):
         # Should not have '+ Cart' button on listing card for supplier
         self.assertNotContains(index_resp, "title=\"Add to Multi-Supplier Cart\"")
 
-    def test_category_name_and_image_mismatch_fails_validation(self):
-        """Listing fails validation if material name or image contradicts the selected category."""
+    def test_category_name_conflict_fails_validation(self):
+        """Listing fails validation if material title explicitly contradicts the selected category."""
         from marketplace.forms import MaterialListingForm
         from django.core.files.uploadedfile import SimpleUploadedFile
 
         # Title conflict: Category 'rubber' but name mentions 'Fish'
-        fake_img = SimpleUploadedFile("tyre_crumb.jpg", b"dummy image data", content_type="image/jpeg")
+        fake_img = SimpleUploadedFile("sample.jpg", b"\xff\xd8\xff\xe0dummy", content_type="image/jpeg")
         form_bad_name = MaterialListingForm(
             data={
                 "material_name": "Marine Fish Scales Residue",
@@ -313,22 +313,167 @@ class MarketplaceCoreEngineTests(TestCase):
         self.assertFalse(form_bad_name.is_valid())
         self.assertIn("Category Conflict", form_bad_name.errors.get("material_name", [""])[0])
 
-        # Image conflict: Category 'rubber' but image filename is 'fish_scales.jpg'
-        bad_img = SimpleUploadedFile("fish_scales.jpg", b"dummy image data", content_type="image/jpeg")
-        form_bad_img = MaterialListingForm(
+    def test_image_verifier_matching_high_score(self):
+        """Matching image content gives score >= 80% and 'Likely Match' status."""
+        import io
+        from PIL import Image
+        import numpy as np
+        from marketplace.services.image_verifier import verify_waste_image
+
+        # Create genuine brown textured coconut shell image
+        arr = np.full((128, 128, 3), (140, 90, 45), dtype=np.uint8)
+        arr[:64, :64] = (160, 110, 55)
+        arr[64:, 64:] = (110, 70, 35)
+        img = Image.fromarray(arr)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
+
+        result = verify_waste_image(buf, "coconut")
+        self.assertGreaterEqual(result["score"], 80.0)
+        self.assertEqual(result["status"], "Likely Match")
+        self.assertTrue(result["is_likely_match"])
+
+    def test_image_verifier_mismatched_low_score(self):
+        """Mismatched image content gives score < 50% and 'Possible Mismatch' status."""
+        import io
+        from PIL import Image
+        from marketplace.services.image_verifier import verify_waste_image
+
+        # Dark black tyre crumb image tested against coconut shell category
+        img = Image.new("RGB", (128, 128), color=(25, 25, 28))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
+
+        result = verify_waste_image(buf, "coconut")
+        self.assertLess(result["score"], 50.0)
+        self.assertEqual(result["status"], "Possible Mismatch")
+        self.assertTrue(result["is_mismatch"])
+        self.assertEqual(result["detected_category"], "Scrap Rubber")
+
+    def test_supplier_submission_never_blocked_by_image_mismatch(self):
+        """Supplier must ALWAYS be able to submit a listing even if image is a mismatch."""
+        import io
+        from PIL import Image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from marketplace.forms import MaterialListingForm
+
+        # Create black rubber image
+        img = Image.new("RGB", (128, 128), color=(20, 20, 22))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        uploaded_img = SimpleUploadedFile("IMG_48392.jpg", buf.getvalue(), content_type="image/jpeg")
+
+        # Category selected is Coconut Shells, but image content is black rubber
+        form = MaterialListingForm(
             data={
-                "material_name": "Shredded Tyre Crumb Rubber",
-                "category": "rubber",
+                "material_name": "Dry Coconut Shells Batch A",
+                "category": "coconut",
                 "volume_tons": 50.0,
+                "quantity_unit": "Tons",
+                "condition": "Recyclable Clean",
                 "purity_percent": 90,
-                "price_per_ton": 18000.00,
-                "location": "Kottayam, Kerala",
+                "moisture_percent": 8.0,
+                "contamination_percent": 2.0,
+                "price_per_ton": 14000.00,
+                "location": "Alappuzha, Kerala",
                 "moq_tons": 10.0,
+                "quality_grade": "grade_a",
+                "sampling_protocol": "Standard Composite Sampling ASTM D6323",
+                "lead_time_days": 4,
+                "packaging_type": "Woven poly bulk bags, 500 kg",
+                "particle_size": "2–5 mm",
+                "compliance_id": "KPCB-WM-22910",
             },
-            files={"image": bad_img}
+            files={"image": uploaded_img}
         )
-        self.assertFalse(form_bad_img.is_valid())
-        self.assertIn("Image Conflict", form_bad_img.errors.get("image", [""])[0])
+        # Form MUST be valid and NOT blocked!
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+
+        # Save listing and verify status is recorded as Possible Mismatch
+        listing = form.save(commit=False)
+        listing.supplier = self.supplier_company
+        listing.save()
+
+        self.assertEqual(listing.image_verification_status, "Possible Mismatch")
+        self.assertLess(listing.image_verification_score, 50.0)
+        self.assertEqual(listing.image_detected_category, "Scrap Rubber")
+        self.assertEqual(listing.category, "coconut")
+
+    def test_invalid_corrupted_image_handling_safely(self):
+        """Corrupted or invalid image files are handled safely without crashing."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from marketplace.services.image_verifier import verify_waste_image
+
+        corrupted = SimpleUploadedFile("corrupted.jpg", b"This is not a real JPEG file", content_type="image/jpeg")
+        result = verify_waste_image(corrupted, "rubber")
+
+        self.assertEqual(result["status"], "Manual Review")
+        self.assertEqual(result["score"], 0.0)
+        self.assertIn("Corrupted", result["detected_category"])
+
+    def test_multi_image_partial_match_keeps_matching_and_removes_mismatches(self):
+        """When image 1 is correct and images 2 & 3 do not match, only include 1 and remove the other 2."""
+        import io
+        from PIL import Image
+        import numpy as np
+        from marketplace.services.image_verifier import process_multi_image_verification
+
+        # Image 1: Valid Coconut Shell (brown fibrous)
+        arr = np.full((128, 128, 3), (140, 90, 45), dtype=np.uint8)
+        arr[:64, :64] = (160, 110, 55)
+        arr[64:, 64:] = (110, 70, 35)
+        img1 = Image.fromarray(arr)
+        buf1 = io.BytesIO()
+        img1.save(buf1, format="JPEG")
+        buf1.seek(0)
+
+        # Image 2: Black Rubber (Mismatch for coconut)
+        img2 = Image.new("RGB", (128, 128), color=(25, 25, 28))
+        buf2 = io.BytesIO()
+        img2.save(buf2, format="JPEG")
+        buf2.seek(0)
+
+        # Image 3: Black Rubber (Mismatch for coconut)
+        img3 = Image.new("RGB", (128, 128), color=(30, 30, 33))
+        buf3 = io.BytesIO()
+        img3.save(buf3, format="JPEG")
+        buf3.seek(0)
+
+        res = process_multi_image_verification(buf1, [buf2, buf3], "coconut")
+
+        self.assertEqual(res["matched_count"], 1)
+        self.assertEqual(res["mismatched_count"], 2)
+        self.assertFalse(res["use_category_symbol"])
+        # The 2 mismatched images were automatically removed from the gallery!
+        self.assertEqual(len(res["verified_gallery"]), 0)
+        self.assertIn("1 authentic image(s) verified", res["message"])
+        self.assertIn("2 mismatched image(s) were automatically filtered out", res["message"])
+
+    def test_multi_image_all_mismatch_automatically_applies_category_symbols(self):
+        """When none of 1st, 2nd, or 3rd images match, automatically apply category symbols."""
+        import io
+        from PIL import Image
+        from marketplace.services.image_verifier import process_multi_image_verification
+
+        # 3 Dark Rubber images tested against Coconut category
+        bufs = []
+        for c in [(20, 20, 22), (25, 25, 28), (18, 18, 20)]:
+            img = Image.new("RGB", (128, 128), color=c)
+            b = io.BytesIO()
+            img.save(b, format="JPEG")
+            b.seek(0)
+            bufs.append(b)
+
+        res = process_multi_image_verification(bufs[0], bufs[1:], "coconut")
+
+        self.assertEqual(res["matched_count"], 0)
+        self.assertEqual(res["mismatched_count"], 3)
+        self.assertTrue(res["use_category_symbol"])
+        self.assertEqual(res["status"], "Possible Mismatch")
+        self.assertEqual(len(res["verified_gallery"]), 0)
+        self.assertIn("official industrial stream symbol has been automatically applied", res["message"])
 
     def test_purity_conflict_fails_validation(self):
         """Declared purity exceeding certificate assay by >5% must fail validation."""
@@ -353,4 +498,88 @@ class MarketplaceCoreEngineTests(TestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn("Purity Conflict", form.errors.get("purity_percent", [""])[0])
+
+    def test_standard_cart_mixed_categories(self):
+        """Standard shopping cart allows adding multiple items from different categories."""
+        from marketplace.services.aggregation import StandardCartService
+        session = self.client.session
+        cart = StandardCartService(session)
+
+        # Listing 1 is rubber
+        cart.add_item(self.listing, 25.0)
+
+        # Create plastic listing
+        cat_plastic = MaterialCategory.objects.create(
+            name="Industrial Plastics",
+            code="plastic",
+            standard_price_per_ton=Decimal("25000.00"),
+            carbon_offset_factor=Decimal("2.10")
+        )
+        plastic_listing = MaterialListing.objects.create(
+            supplier=self.supplier_company,
+            material_name="HDPE Shredded Regrind",
+            category="plastic",
+            price_per_ton=Decimal("24000.00"),
+            volume_tons=Decimal("100.00"),
+            moq_tons=Decimal("5.00"),
+            location="Palakkad, Kerala",
+            approval_status="approved",
+            is_active=True,
+        )
+
+        # Adding plastic listing to standard cart succeeds (no category isolation conflict)
+        cart.add_item(plastic_listing, 15.0)
+        summary = cart.get_summary()
+
+        self.assertEqual(summary["items_count"], 2)
+        self.assertEqual(summary["total_tons"], 40.0)
+        self.assertGreater(summary["grand_total"], 0)
+
+    def test_batch_cart_excess_capping_never_exceeds_target(self):
+        """Multi-factor aggregation detects excess from last supplier and caps to target."""
+        session = self.client.session
+        cart = BatchCartService(session)
+        cart.set_target(50.0, "Scrap Rubber", "rubber")
+
+        # Listing 1 adds 30 tons
+        cart.add_listing(self.listing, 30.0)
+        summary1 = cart.get_summary()
+        self.assertEqual(summary1["collected_tons"], 30.0)
+        self.assertEqual(summary1["remaining_tons"], 20.0)
+
+        # Second rubber supplier listing with 40 tons
+        listing2 = MaterialListing.objects.create(
+            supplier=self.supplier_company,
+            material_name="Vulcanized Rubber Granules",
+            category="rubber",
+            price_per_ton=Decimal("19000.00"),
+            volume_tons=Decimal("40.00"),
+            moq_tons=Decimal("10.00"),
+            location="Kochi, Kerala",
+            approval_status="approved",
+            is_active=True,
+        )
+
+        # Add 40 tons: since only 20 tons is needed, it must be capped to 20 tons!
+        cart.add_listing(listing2, 40.0, cap_to_target=True)
+        summary2 = cart.get_summary()
+
+        self.assertEqual(summary2["collected_tons"], 50.0)
+        self.assertEqual(summary2["remaining_tons"], 0.0)
+        self.assertTrue(summary2["is_fully_filled"])
+
+    def test_cart_add_respects_custom_buyer_quantity(self):
+        """When buyer increases quantity beyond MOQ, cart_add receives and records that quantity."""
+        self.client.force_login(self.buyer_user)
+        # MOQ is 10 tons, buyer requests 75 tons
+        response = self.client.post(f"/cart/add/{self.listing.pk}/", {"volume_requested": "75.0"})
+        self.assertEqual(response.status_code, 302)
+
+        session = self.client.session
+        cart = BatchCartService(session)
+        summary = cart.get_summary()
+
+        # Target should have accommodated 75 tons, and collected should be 75 tons (not 10 tons!)
+        self.assertEqual(summary["collected_tons"], 75.0)
+
 

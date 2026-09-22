@@ -164,3 +164,72 @@ class CompanySignupForm(forms.Form):
                 )
 
         return cleaned_data
+
+
+class ForgotPasswordForm(forms.Form):
+    identifier = forms.CharField(
+        label="Username or Registered Email",
+        max_length=150,
+        widget=forms.TextInput(attrs={'placeholder': 'Enter your registered corporate username or email', 'autofocus': 'autofocus'})
+    )
+
+
+class ResetPasswordOTPForm(forms.Form):
+    otp = forms.CharField(
+        label="6-Digit OTP Code",
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={'placeholder': '• • • • • •', 'autocomplete': 'one-time-code'})
+    )
+    new_password = forms.CharField(
+        label="New Password",
+        widget=forms.PasswordInput(attrs={'placeholder': 'Enter at least 8 characters'}),
+        min_length=8
+    )
+    confirm_password = forms.CharField(
+        label="Confirm New Password",
+        widget=forms.PasswordInput(attrs={'placeholder': 'Re-enter your new password'})
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pw = cleaned_data.get('new_password')
+        cpw = cleaned_data.get('confirm_password')
+        if pw:
+            try:
+                validate_password(pw)
+            except forms.ValidationError as error:
+                self.add_error('new_password', error)
+        if pw and cpw and pw != cpw:
+            self.add_error('confirm_password', 'Passwords do not match.')
+        return cleaned_data
+
+
+class EnterpriseProfileForm(forms.ModelForm):
+    email = forms.EmailField(
+        label="Registered Corporate Email",
+        required=True,
+        widget=forms.EmailInput()
+    )
+
+    class Meta:
+        model = Company
+        fields = [
+            'company_name',
+            'authorized_person',
+            'phone',
+            'address',
+            'logo_image',
+        ]
+        widgets = {
+            'company_name': forms.TextInput(),
+            'authorized_person': forms.TextInput(),
+            'phone': forms.TextInput(),
+            'address': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def clean_phone(self):
+        phone = self.cleaned_data['phone'].strip()
+        if not phone.isdigit() or len(phone) < 10 or len(phone) > 15:
+            raise forms.ValidationError('Enter a valid phone number (10-15 digits).')
+        return phone

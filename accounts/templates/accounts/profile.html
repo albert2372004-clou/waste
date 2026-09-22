@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.company_name|default:request.user.username }} — Enterprise Profile &amp; Governance{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">Enterprise Profile &amp; Intelligence Hub</h1>
+            <div class="breadcrumb">
+                <a href="{% url 'index' %}">Marketplace</a> / Corporate Profile &amp; Audit Logs
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="status-pill {{ company.verification_status|default:'verified' }}">
+                {{ company.get_verification_status_display|default:'Active Enterprise' }}
+            </span>
+            <span class="mono" style="font-size: 0.78rem; background: var(--paper-raised); padding: 5px 10px; border: var(--border); border-radius: var(--radius);">
+                GSTIN: <strong>{{ company.gstin|default:'N/A' }}</strong>
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px; padding-bottom: 60px;">
+
+    <!-- Enterprise Hero Banner (Amazon Pro / Flipkart Pro Seller style) -->
+    <div class="panel" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #fff; margin-bottom: 24px; padding: 28px; border: none; border-radius: 6px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="width: 80px; height: 80px; border-radius: 8px; background: #334155; border: 2px solid #475569; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                    {% if company.logo_image %}
+                        <img src="{{ company.logo_image.url }}" alt="{{ company.company_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                        <span style="font-size: 2.2rem;">🏢</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <h2 style="color: #fff; font-size: var(--step-3); margin: 0;">
+                            {{ company.company_name|default:request.user.username }}
+                        </h2>
+                        <span class="status-pill ok" style="font-size: 0.7rem;">
+                            {{ company.get_user_type_display|default:'Enterprise Member' }}
+                        </span>
+                    </div>
+                    <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 6px;">
+                        📍 {{ company.address|default:'Kerala Industrial Corridor'|truncatechars:45 }} &bull;
+                        Auth: <strong>{{ company.authorized_person|default:request.user.username }}</strong> &bull;
+                        Reg: <span class="mono">{{ company.registration_number|default:'REG-PENDING' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                {% if company.user_type == 'supplier' or company.user_type == 'both' %}
+                    <a href="{% url 'listing_create' %}" class="btn btn-primary btn-sm">+ List Byproduct</a>
+                {% endif %}
+                {% if company.user_type == 'buyer' or company.user_type == 'both' %}
+                    <a href="{% url 'buyer_orders' %}" class="btn btn-amber btn-sm">📦 Active Logistics</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Metric Counters Row -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="background: rgba(255,255,255,0.04); padding: 12px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Procurement Orders</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #f8fafc; font-family: var(--font-mono); margin-top: 2px;">{{ orders|length }}</div>
+                <div style="font-size: 0.7rem; color: #38bdf8;">₹{{ total_spent|floatformat:0 }} transacted</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.04); padding: 12px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Byproduct Streams</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #f8fafc; font-family: var(--font-mono); margin-top: 2px;">{{ listings|length }}</div>
+                <div style="font-size: 0.7rem; color: #4ade80;">{{ total_volume_sold|floatformat:1 }} t secondary inventory</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.04); padding: 12px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Circular Pledges</div>
+                <div style="font-size: 1.3rem; font-weight: 700; color: #f8fafc; font-family: var(--font-mono); margin-top: 2px;">{{ pledges|length }}</div>
+                <div style="font-size: 0.7rem; color: #fbbf24;">₹{{ total_pledged|floatformat:0 }} innovation capital</div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.04); padding: 12px 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Compliance Status</div>
+                <div style="font-size: 1.1rem; font-weight: 700; color: #34d399; margin-top: 4px;">
+                    {% if company.is_verified %}Verified KSPCB{% else %}In Review{% endif %}
+                </div>
+                <div style="font-size: 0.7rem; color: #94a3b8;">Email &amp; GST Checked</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Profile Sections Grid -->
+    <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+
+        <!-- 1. Enterprise Details & Profile Edit Form -->
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--slate-200); padding-bottom: 12px;">
+                <h3 style="margin: 0; font-size: 1.05rem;">
+                    ⚙️ Corporate Identity &amp; Contact Information
+                </h3>
+                <span style="font-size: 0.75rem; color: var(--slate-500);">
+                    Keep operational data current for weighbridge &amp; GST invoices
+                </span>
+            </div>
+
+            {% if form %}
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="update_profile" value="1">
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:6px;">Company / Plant Name</label>
+                        {{ form.company_name }}
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:6px;">Authorized Representative</label>
+                        {{ form.authorized_person }}
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:6px;">Corporate Email (Invoices &amp; OTP)</label>
+                        {{ form.email }}
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:6px;">Phone / Dispatch Hotline</label>
+                        {{ form.phone }}
+                    </div>
+
+                    <div style="grid-column: 1 / -1;">
+                        <label style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:6px;">Manufacturing Plant Address (Pickup/Delivery Hub)</label>
+                        {{ form.address }}
+                    </div>
+
+                    <div style="grid-column: 1 / -1; background: var(--paper); padding: 14px; border: 1px solid var(--slate-200); border-radius: var(--radius);">
+                        <label style="display:block; font-weight:600; font-size:0.8rem; margin-bottom:6px;">Enterprise Logo / Profile Avatar</label>
+                        {{ form.logo_image }}
+                        <div style="font-size: 0.72rem; color: var(--slate-500); margin-top: 4px;">
+                            Upload your factory or enterprise corporate logo (PNG, JPG, SVG). Displayed on listings, weighbridge receipts, and funding cards.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="submit" class="btn btn-primary" style="padding: 10px 24px;">
+                        Save Profile Updates &rarr;
+                    </button>
+                </div>
+            </form>
+            {% else %}
+                <p style="color: var(--slate-500); font-size: 0.85rem;">Platform administrator account.</p>
+            {% endif %}
+        </div>
+
+        <!-- 2. Buyer Procurement & Delivery Tracking History (Amazon/Flipkart Pro style) -->
+        {% if orders %}
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.05rem;">
+                    📦 Buyer Order History &amp; Live Tracking
+                </h3>
+                <span class="mono" style="font-size: 0.75rem; color: var(--slate-500);">
+                    {{ orders|length }} Recorded Procurement{{ orders|length|pluralize }}
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tracking #</th>
+                            <th>Material Stream</th>
+                            <th>Supplier &amp; Location</th>
+                            <th>Volume</th>
+                            <th>Total (incl. Toll)</th>
+                            <th>Payment Escrow</th>
+                            <th>Corridor Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td class="mono" style="font-weight: 700; color: var(--emerald-dark);">
+                                {{ order.tracking_number }}
+                            </td>
+                            <td>
+                                <strong>{{ order.listing.material_name }}</strong><br>
+                                <span class="tag" style="font-size: 0.68rem;">{{ order.listing.get_category_display }}</span>
+                            </td>
+                            <td>
+                                {{ order.listing.supplier.company_name }}<br>
+                                <span style="font-size: 0.72rem; color: var(--slate-500);">📍 {{ order.origin_facility }}</span>
+                            </td>
+                            <td class="mono font-bold">{{ order.volume_requested }} t</td>
+                            <td class="mono font-bold">₹{{ order.volume_requested|floatformat:0 }}</td>
+                            <td>
+                                {% if order.payment_status == 'escrow_held' %}
+                                    <span class="status-pill pending" style="font-size: 0.68rem;">Escrow Held</span>
+                                {% elif order.payment_status == 'released_to_supplier' %}
+                                    <span class="status-pill ok" style="font-size: 0.68rem;">Funds Released</span>
+                                {% else %}
+                                    <span class="status-pill" style="font-size: 0.68rem;">{{ order.get_payment_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="font-size: 0.75rem; font-weight: 600; color: var(--slate-800); margin-bottom: 4px;">
+                                    {{ order.get_delivery_status_display }}
+                                </div>
+                                <div style="height: 6px; width: 110px; background: var(--slate-200); border-radius: 3px; overflow: hidden;">
+                                    <div style="width: {{ order.tracking_progress_percent }}%; height: 100%; background: var(--emerald);"></div>
+                                </div>
+                                <div style="font-size: 0.68rem; color: var(--slate-500); margin-top: 2px;">
+                                    {{ order.current_location|truncatechars:28 }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 3. Supplier Waste Stream Listings History -->
+        {% if listings %}
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.05rem;">
+                    🏭 Supplier Byproduct Stream Registry
+                </h3>
+                <a href="{% url 'listing_create' %}" class="btn btn-outline btn-sm">+ Add New Stream</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Material Name</th>
+                            <th>Category</th>
+                            <th>Available Tons</th>
+                            <th>Price / Ton</th>
+                            <th>Purity / Trust</th>
+                            <th>Market Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stream in listings %}
+                        <tr>
+                            <td>
+                                <strong>{{ stream.material_name }}</strong><br>
+                                <span class="mono" style="font-size: 0.7rem; color: var(--slate-500);">Batch: {{ stream.batch_id|default:'N/A' }}</span>
+                            </td>
+                            <td><span class="tag">{{ stream.get_category_display }}</span></td>
+                            <td class="mono font-bold">{{ stream.volume_tons }} t</td>
+                            <td class="mono" style="font-weight: 700; color: var(--emerald-dark);">₹{{ stream.price_per_ton }}/t</td>
+                            <td>
+                                <span class="tag verified">{{ stream.purity_percent }}% Purity</span>
+                                <span class="tag" style="background: #f1f5f9;">Score: {{ stream.trust_score }}</span>
+                            </td>
+                            <td>
+                                {% if stream.approval_status == 'approved' %}
+                                    <span class="status-pill ok" style="font-size: 0.68rem;">Live on Hub</span>
+                                {% elif stream.approval_status == 'pending' %}
+                                    <span class="status-pill pending" style="font-size: 0.68rem;">Admin Review</span>
+                                {% else %}
+                                    <span class="status-pill block" style="font-size: 0.68rem;">Rejected</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 4. Circular Funding Pledges & Active Benefits -->
+        {% if pledges %}
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; font-size: 1.05rem;">
+                    🌱 Circular Capital Contributions &amp; Earned Off-Take Benefits
+                </h3>
+                <a href="{% url 'funding_list' %}" class="btn btn-outline btn-sm">Explore Innovation Grants</a>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Initiative Backed</th>
+                            <th>Pledge Amount</th>
+                            <th>Earned Investor Tier &amp; Benefit</th>
+                            <th>Date Recorded</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pledge in pledges %}
+                        <tr>
+                            <td>
+                                <strong>{{ pledge.project.title }}</strong><br>
+                                <span style="font-size: 0.72rem; color: var(--slate-500);">Beneficiary: {{ pledge.project.beneficiary_enterprise }}</span>
+                            </td>
+                            <td class="mono font-bold" style="color: var(--emerald-dark); font-size: 0.95rem;">
+                                ₹{{ pledge.amount|floatformat:0 }}
+                            </td>
+                            <td>
+                                <span class="status-pill ok" style="font-size: 0.72rem;">
+                                    {{ pledge.get_benefit_tier_display }}
+                                </span>
+                            </td>
+                            <td class="mono" style="font-size: 0.75rem; color: var(--slate-500);">
+                                {{ pledge.created_at|date:"M d, Y" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 5. Account Security & Deactivation -->
+        <div class="panel" style="border: 1px solid #fecaca; background: #fffaf0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="color: var(--danger); font-size: 0.95rem; margin-bottom: 4px;">
+                        ⚠️ Enterprise Account Governance &amp; Deactivation
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--slate-600); margin: 0; line-height: 1.4;">
+                        Need to close or deactivate this facility profile? For regulatory compliance under CPCB &amp; KSPCB circular rules, historical transaction logs, GST invoices, and weighbridge audit slips are safely archived while terminating active sessions and marketplace streams.
+                    </p>
+                </div>
+                <div>
+                    <form method="POST" onsubmit="return confirm('Are you sure you want to deactivate your enterprise account? Active listings will be suspended and you will be signed out.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="deactivate_account" value="1">
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            Deactivate Enterprise Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    input[type="text"], input[type="email"], textarea {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 0.86rem;
+        background: #fff;
+    }
+    input:focus, textarea:focus {
+        outline: 2px solid var(--emerald);
+        border-color: var(--emerald);
+    }
+</style>
+{% endblock %}

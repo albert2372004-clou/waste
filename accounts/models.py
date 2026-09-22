@@ -59,6 +59,13 @@ class Company(models.Model):
         help_text='Upload business registration certificate or pollution control permit.'
     )
 
+    logo_image = models.FileField(
+        upload_to='company_logos/',
+        blank=True,
+        null=True,
+        help_text='Enterprise profile picture or company logo.'
+    )
+
     verification_status = models.CharField(
         max_length=20,
         choices=STATUS,

@@ -161,7 +161,7 @@ class Command(BaseCommand):
         )
 
         # Also update demo admin
-        admin_u, _ = User.objects.get_or_create(username="admin", defaults={"email": "admin@antigravity.in", "is_staff": True, "is_superuser": True})
+        admin_u, _ = User.objects.get_or_create(username="admin", defaults={"email": "admin@circularexchange.org", "is_staff": True, "is_superuser": True})
         admin_u.set_password("Admin123#")
         admin_u.save()
 

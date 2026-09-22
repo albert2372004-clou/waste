@@ -17,7 +17,7 @@
                     <span style="color: #cbd5e1;">(Dual-Role Enterprise: Buyer &amp; Supplier)</span>
                 {% endif %}
             {% else %}
-                <span>👋 Welcome to <strong>Anti Gravity: Kerala Circular Waste Intelligence Hub</strong></span>
+                <span>👋 Welcome to <strong>Kerala Circular Waste Intelligence Platform</strong></span>
             {% endif %}
         </div>
         <div style="display: flex; gap: 14px; font-family: var(--font-mono); font-size: 0.72rem;">
@@ -231,8 +231,8 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px;">
             {% for item in listings %}
             <article class="panel product-card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
-                <!-- Header / Media simulation with real image or badge -->
-                {% if item.image %}
+                <!-- Header / Media simulation with real image or official stream symbol -->
+                {% if item.image and not item.use_category_symbol %}
                     <div style="aspect-ratio: 16/9; background: #0f172a; position: relative; overflow: hidden;">
                         <img src="{{ item.image.url }}" alt="{{ item.material_name }}" style="width: 100%; height: 100%; object-fit: cover;">
                         <span class="mono" style="position: absolute; bottom: 8px; left: 8px; font-size: 0.72rem; color: #fff; background: rgba(15,23,42,0.85); padding: 3px 8px; border-radius: var(--radius); backdrop-filter: blur(4px);">
@@ -244,12 +244,17 @@
                     </div>
                 {% else %}
                     <div style="aspect-ratio: 16/9; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff;">
-                        <div style="font-size: 2rem; margin-bottom: 4px;">
-                            {% if item.category == 'rubber' %}🛞{% elif item.category == 'textile' %}🧵{% elif item.category == 'coconut' %}🥥{% elif item.category == 'plastic' %}🧪{% elif item.category == 'fish' %}🐟{% else %}📦{% endif %}
+                        <div style="font-size: 2.5rem; margin-bottom: 4px;">
+                            {{ item.category_symbol }}
                         </div>
                         <span class="mono" style="font-size: 0.72rem; color: #cbd5e1; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.15);">
                             Batch #{{ item.batch_id }}
                         </span>
+                        {% if item.use_category_symbol %}
+                        <div style="position: absolute; bottom: 8px; font-size: 0.65rem; color: #fde68a; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;">
+                            ⚡ Official Stream Symbol
+                        </div>
+                        {% endif %}
                         <div style="position: absolute; top: 10px; right: 10px; background: var(--amber); color: #1f1300; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; padding: 3px 7px; border-radius: var(--radius);">
                             {{ item.trust_score }}% Reliable
                         </div>
@@ -292,15 +297,18 @@
                             <span class="mono" style="font-size: 1.2rem; font-weight: 700; color: var(--slate-950);">₹{{ item.price_per_ton|floatformat:0 }}</span>
                             <span style="font-size: 0.72rem; color: var(--slate-500);">/ ton</span>
                         </div>
-                        <div style="display: flex; gap: 6px;">
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                             {% if not request.user.is_authenticated or not request.user.company or request.user.company.can_buy and request.session.active_mode != 'supplier' %}
                                 {% if request.user.company.user_type != 'supplier' %}
-                                <a href="{% url 'cart_add' pk=item.pk %}" class="btn btn-outline btn-sm" title="Add to Multi-Supplier Cart">
-                                    + Cart
+                                <a href="{% url 'standard_cart_add' pk=item.pk %}" class="btn btn-outline btn-sm" title="Add to Normal Shopping Cart (Flipkart Style)" style="font-size: 0.75rem; padding: 5px 8px;">
+                                    🛒 + Cart
+                                </a>
+                                <a href="{% url 'cart_add' pk=item.pk %}" class="btn btn-amber btn-sm" title="Add to Multi-Supplier Aggregation Batch Pool" style="font-size: 0.75rem; padding: 5px 8px;">
+                                    ⚡ + Batch
                                 </a>
                                 {% endif %}
                             {% endif %}
-                            <a href="{% url 'product_detail' pk=item.pk %}" class="btn btn-primary btn-sm">
+                            <a href="{% url 'product_detail' pk=item.pk %}" class="btn btn-primary btn-sm" style="font-size: 0.75rem; padding: 5px 10px;">
                                 View Specs &rarr;
                             </a>
                         </div>

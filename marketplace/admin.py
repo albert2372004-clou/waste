@@ -24,27 +24,82 @@ class MaterialCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'code')
 
 
+from django.utils.html import format_html
+
+
 @admin.register(MaterialListing)
 class MaterialListingAdmin(admin.ModelAdmin):
     list_display = (
+        'image_thumbnail',
         'material_name',
         'batch_id',
         'category',
+        'image_detected_category',
+        'verification_badge',
+        'use_category_symbol',
+        'approval_status',
         'supplier',
         'volume_tons',
-        'quantity_unit',
         'price_per_ton',
-        'recommended_price',
-        'purity_percent',
-        'approval_status',
-        'mismatch_warning',
         'is_active',
         'created_at',
     )
-    list_filter = ('approval_status', 'category', 'status', 'is_active', 'permit_verified')
-    search_fields = ('material_name', 'batch_id', 'supplier__company_name', 'location')
+    list_filter = (
+        'approval_status',
+        'image_verification_status',
+        'use_category_symbol',
+        'category',
+        'status',
+        'is_active',
+        'permit_verified',
+    )
+    search_fields = ('material_name', 'batch_id', 'supplier__company_name', 'location', 'image_detected_category')
+    readonly_fields = (
+        'image_preview_large',
+        'verification_badge',
+        'use_category_symbol',
+        'image_verification_status',
+        'image_verification_score',
+        'image_detected_category',
+        'created_at',
+        'updated_at',
+    )
     inlines = [ListingImageInline]
-    actions = ['approve_listings', 'reject_listings']
+    actions = ['approve_listings', 'reject_listings', 'manual_review_listings']
+
+    def image_thumbnail(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;" />',
+                obj.image.url
+            )
+        return format_html('<span style="color: #94a3b8; font-size: 11px;">No photo</span>')
+    image_thumbnail.short_description = "Image"
+
+    def image_preview_large(self, obj):
+        if obj.image:
+            return format_html(
+                '<div style="margin-bottom: 8px;"><img src="{}" style="max-width: 280px; max-height: 220px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" /></div>',
+                obj.image.url
+            )
+        return "No image uploaded"
+    image_preview_large.short_description = "Uploaded Waste Stream Photo"
+
+    def verification_badge(self, obj):
+        badge_colors = {
+            "Likely Match": "#10b981",       # emerald green
+            "Manual Review": "#f59e0b",      # amber orange
+            "Possible Mismatch": "#ef4444",  # rose red
+        }
+        color = badge_colors.get(obj.image_verification_status, "#64748b")
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 10px; border-radius: 12px; font-weight: 600; font-size: 11px; white-space: nowrap; display: inline-block;">'
+            '{} ({:.0f}%)</span>',
+            color,
+            obj.image_verification_status or "Pending",
+            obj.image_verification_score or 0.0
+        )
+    verification_badge.short_description = "Verification Status"
 
     @admin.action(description="Approve selected waste stream listings")
     def approve_listings(self, request, queryset):
@@ -55,6 +110,11 @@ class MaterialListingAdmin(admin.ModelAdmin):
     def reject_listings(self, request, queryset):
         rows = queryset.update(approval_status='rejected')
         self.message_user(request, f"{rows} listing(s) rejected.")
+
+    @admin.action(description="Flag selected listings for Manual Review")
+    def manual_review_listings(self, request, queryset):
+        rows = queryset.update(approval_status='pending', image_verification_status='Manual Review')
+        self.message_user(request, f"{rows} listing(s) marked for manual review.")
 
 
 @admin.register(ListingImage)

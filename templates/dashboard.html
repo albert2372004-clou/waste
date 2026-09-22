@@ -175,7 +175,12 @@
                                 {{ pool.collected_volume_tons|floatformat:0 }} / {{ pool.target_volume_tons|floatformat:0 }} t ({{ pool.progress_percent }}%)
                             </span>
                         </td>
-                        <td>{{ pool.contributing_suppliers_count }} Suppliers</td>
+                        <td>
+                            <strong>{{ pool.contributing_suppliers_count }} Suppliers</strong>
+                            <div style="font-size: 0.7rem; color: var(--emerald-dark); margin-top: 2px;">
+                                Your Share: <strong>35%</strong> &bull; Corridor Partners: <strong>65%</strong>
+                            </div>
+                        </td>
                         <td>
                             {% if pool.status == 'fulfilled' %}
                                 <span class="status-pill ok">Fulfilled</span>
@@ -187,6 +192,13 @@
                     {% endfor %}
                 </tbody>
             </table>
+
+            <div style="margin-top: 12px; font-size: 0.75rem; color: var(--slate-600); background: var(--paper); border: 1px solid var(--slate-200); border-radius: 4px; padding: 10px 14px;">
+                💡 <strong>How Multi-Supplier Ordering Orientation Works:</strong> Aggregation orders prioritize suppliers based on: 
+                <strong>1) Nearest highway distance</strong> along NH 544 corridor (reducing ton-km transport costs), 
+                <strong>2) ASTM assay purity compatibility</strong> (ensuring uniform chemical blend), and 
+                <strong>3) Historical supplier trust score</strong> (ensuring on-time weighbridge dispatch).
+            </div>
             {% else %}
             <div style="text-align: center; padding: 20px; color: var(--slate-500);">No active aggregation pools.</div>
             {% endif %}

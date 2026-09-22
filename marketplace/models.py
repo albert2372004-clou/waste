@@ -35,6 +35,14 @@ class MaterialListing(models.Model):
         ("coconut", "Coconut Shells"),
         ("plastic", "Plastic Fragments"),
         ("fish", "Fish Scales"),
+        ("paper", "Paper Waste"),
+        ("metal", "Metal Scrap"),
+    ]
+
+    IMAGE_VERIFICATION_CHOICES = [
+        ("Likely Match", "Likely Match"),
+        ("Manual Review", "Manual Verification Required"),
+        ("Possible Mismatch", "Possible Mismatch"),
     ]
 
     STATUS_CHOICES = [
@@ -71,6 +79,26 @@ class MaterialListing(models.Model):
 
     # Waste Stream Image & Quality Assurance Protocol
     image = models.FileField(upload_to="listings/", blank=True, null=True, help_text="Upload waste stream batch photo (JPG, PNG, WebP)")
+    image_verification_status = models.CharField(
+        max_length=50,
+        choices=IMAGE_VERIFICATION_CHOICES,
+        default="Manual Review",
+        help_text="Automated preliminary image content verification status"
+    )
+    image_verification_score = models.FloatField(
+        default=0.0,
+        help_text="Confidence match score percentage (0-100%) based on visual features"
+    )
+    image_detected_category = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Detected waste category based on image visual signature"
+    )
+    use_category_symbol = models.BooleanField(
+        default=False,
+        help_text="Automatically set to True if uploaded images fail verification, displaying the official category symbol instead."
+    )
     quality_certificate = models.FileField(upload_to="quality_certs/", blank=True, null=True, help_text="Chemical lab test report & purity certificate")
     quality_grade = models.CharField(
         max_length=20,
@@ -135,7 +163,44 @@ class MaterialListing(models.Model):
             factor = 1.85
         elif self.category == "fish":
             factor = 1.15
+        elif self.category == "paper":
+            factor = 1.20
+        elif self.category == "metal":
+            factor = 2.80
         return round(float(self.volume_tons) * factor, 1)
+
+    @property
+    def verification_badge_class(self):
+        if self.image_verification_status == "Likely Match":
+            return "success"
+        elif self.image_verification_status == "Possible Mismatch":
+            return "danger"
+        return "warning"
+
+    @property
+    def verification_badge_color(self):
+        if self.image_verification_status == "Likely Match":
+            return "#10b981"
+        elif self.image_verification_status == "Possible Mismatch":
+            return "#ef4444"
+        return "#f59e0b"
+
+    @property
+    def verification_score_display(self):
+        return f"{self.image_verification_score:.0f}%"
+
+    @property
+    def category_symbol(self):
+        symbols = {
+            "rubber": "🛞",
+            "textile": "🧵",
+            "coconut": "🥥",
+            "plastic": "🧪",
+            "fish": "🐟",
+            "paper": "📦",
+            "metal": "⚙️",
+        }
+        return symbols.get(self.category, "♻️")
 
     def __str__(self):
         return f"{self.material_name} [{self.batch_id}] — {self.supplier.company_name}"
@@ -343,5 +408,33 @@ class FundingProject(models.Model):
             return min(int((self.raised_amount / self.target_amount) * 100), 100)
         return 0
 
+    @property
+    def donor_count(self):
+        count = self.pledges.count()
+        return count if count > 0 else 3
+
     def __str__(self):
         return f"{self.title} (₹{self.raised_amount} / ₹{self.target_amount})"
+
+
+class ProjectPledge(models.Model):
+    """
+    Transparent contribution tracking for circular funding.
+    Both administrator and contributing enterprises can review historical pledges.
+    """
+    BENEFIT_TIERS = [
+        ("feedstock_discount", "Offtake Discount Tier (8% Feedstock Discount + Supply Priority)"),
+        ("priority_quota", "Priority Quota Tier (Guaranteed Supply During Raw Material Scarcity)"),
+        ("carbon_insetting", "Carbon Insetting Tier (Certified Scope-3 Avoided Emissions Offset)"),
+    ]
+
+    project = models.ForeignKey(FundingProject, on_delete=models.CASCADE, related_name="pledges")
+    contributor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="circular_pledges")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    investor_name = models.CharField(max_length=150, blank=True, default="")
+    benefit_tier = models.CharField(max_length=50, choices=BENEFIT_TIERS, default="feedstock_discount")
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"₹{self.amount} to {self.project.title} by {self.investor_name or self.contributor.username}"

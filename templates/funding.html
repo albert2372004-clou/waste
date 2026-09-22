@@ -142,6 +142,142 @@
             </div>
         {% endfor %}
     </div>
+
+    <!-- Transparent Backer Ledger & Investor Return Mechanisms -->
+    <div style="margin-top: 36px; display: grid; grid-template-columns: 1fr; gap: 24px;">
+
+        <!-- How Givers / Buyers Earn Profit & Recoup Capital -->
+        <div class="panel" style="border-left: 4px solid var(--amber); background: #fffcf5;">
+            <h3 style="font-size: 1.05rem; color: #92400e; margin-bottom: 8px;">
+                💰 How Contributing Enterprises Earn Returns on Circular Pledges
+            </h3>
+            <p style="font-size: 0.84rem; color: var(--slate-700); line-height: 1.5; margin-bottom: 14px;">
+                Circular funding is an industrial venture-collaboration instrument, not charity. Enterprise backers recoup their pledge capital and earn long-term commercial profits through three legal off-take mechanisms:
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
+                <div style="background: #fff; border: 1px solid #fed7aa; border-radius: 4px; padding: 12px;">
+                    <div style="font-weight: 700; font-size: 0.85rem; color: #9a3412;">
+                        🥇 1. 8% Off-Take Feedstock Discount
+                    </div>
+                    <p style="font-size: 0.78rem; color: var(--slate-600); margin-top: 4px; line-height: 1.4;">
+                        Once the funded machinery is operational, contributing buyers receive a contractual 8% discount below the benchmark rate on all processed secondary material purchases, recouping their investment within 6–12 months.
+                    </p>
+                </div>
+
+                <div style="background: #fff; border: 1px solid #fed7aa; border-radius: 4px; padding: 12px;">
+                    <div style="font-weight: 700; font-size: 0.85rem; color: #9a3412;">
+                        🥈 2. Guaranteed Supply Allocation Priority
+                    </div>
+                    <p style="font-size: 0.78rem; color: var(--slate-600); margin-top: 4px; line-height: 1.4;">
+                        During peak seasonal shortages or export crises, contributing enterprises get guaranteed first-quota allocation of high-purity recycled rubber, coir pitch, or polymer pellets before general market release.
+                    </p>
+                </div>
+
+                <div style="background: #fff; border: 1px solid #fed7aa; border-radius: 4px; padding: 12px;">
+                    <div style="font-weight: 700; font-size: 0.85rem; color: #9a3412;">
+                        🥉 3. Certified Scope-3 Carbon Insetting
+                    </div>
+                    <p style="font-size: 0.78rem; color: var(--slate-600); margin-top: 4px; line-height: 1.4;">
+                        Every ton of byproduct re-routed into secondary manufacturing generates certified avoided carbon credits (1.69 t CO₂e/ton) credited to the backer's annual corporate ESG balance sheet.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logged-in User's Active Pledges & Benefit Tiers -->
+        {% if user_pledges %}
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="margin: 0; font-size: 1.05rem;">
+                    👤 Your Enterprise Pledges &amp; Active Benefit Tiers
+                </h3>
+                <span class="mono" style="font-size: 0.75rem; color: var(--slate-500);">
+                    {{ user_pledges|length }} Active Pledge{{ user_pledges|length|pluralize }}
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Initiative Backed</th>
+                            <th>Beneficiary Enterprise</th>
+                            <th class="mono">Amount Pledged</th>
+                            <th>Active Benefit Tier</th>
+                            <th>Date Recorded</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in user_pledges %}
+                        <tr>
+                            <td><strong>{{ p.project.title }}</strong></td>
+                            <td>{{ p.project.beneficiary_enterprise }}</td>
+                            <td class="mono font-bold" style="color: var(--emerald-dark);">₹{{ p.amount|floatformat:0 }}</td>
+                            <td>
+                                <span class="status-pill ok" style="font-size: 0.7rem;">
+                                    {{ p.get_benefit_tier_display }}
+                                </span>
+                            </td>
+                            <td class="mono" style="font-size: 0.75rem; color: var(--slate-500);">{{ p.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Public Backer Transparency Log -->
+        {% if recent_pledges %}
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="margin: 0; font-size: 1.05rem;">
+                    🏛️ Public Enterprise Backer Ledger (Community Transparency)
+                </h3>
+                <span class="mono" style="font-size: 0.75rem; color: var(--emerald-dark); font-weight: 600;">
+                    Verified Kerala Industrial Pledges
+                </span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Backer Enterprise</th>
+                            <th>Initiative Supported</th>
+                            <th class="mono">Pledge Contribution</th>
+                            <th>Selected Off-Take Tier</th>
+                            <th>Recorded Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rp in recent_pledges %}
+                        <tr>
+                            <td>
+                                <strong>{{ rp.investor_name|default:rp.contributor.username }}</strong>
+                            </td>
+                            <td>{{ rp.project.title }}</td>
+                            <td class="mono font-bold" style="color: var(--emerald-dark);">
+                                ₹{{ rp.amount|floatformat:0 }}
+                            </td>
+                            <td>
+                                <span class="tag verified" style="font-size: 0.7rem;">
+                                    {{ rp.get_benefit_tier_display }}
+                                </span>
+                            </td>
+                            <td class="mono" style="font-size: 0.75rem; color: var(--slate-500);">
+                                {{ rp.created_at|date:"M d, Y H:i" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
 </div>
 
 <style>

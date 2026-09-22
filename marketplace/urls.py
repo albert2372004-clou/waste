@@ -24,9 +24,16 @@ urlpatterns = [
     path("cart/", views.cart_view, name="cart_view"),
     path("batch-cart/", views.cart_view, name="batch_cart"),
     path("cart/add/<int:pk>/", views.cart_add, name="cart_add"),
+    path("cart/auto-fulfill/", views.cart_auto_fulfill, name="cart_auto_fulfill"),
     path("cart/remove/<int:pk>/", views.cart_remove, name="cart_remove"),
     path("cart/checkout/", views.cart_checkout, name="cart_checkout"),
     path("checkout/<int:pk>/", views.checkout, name="checkout"),
+
+    # Standard Shopping Cart (Flipkart/Amazon Style Multi-Product)
+    path("cart/standard/add/<int:pk>/", views.standard_cart_add, name="standard_cart_add"),
+    path("cart/standard/update/<int:pk>/", views.standard_cart_update, name="standard_cart_update"),
+    path("cart/standard/remove/<int:pk>/", views.standard_cart_remove, name="standard_cart_remove"),
+    path("cart/standard/checkout/", views.standard_cart_checkout, name="standard_cart_checkout"),
 
     # Buyer Orders
     path("buyer/orders/", views.buyer_orders, name="buyer_orders"),

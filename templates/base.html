@@ -424,8 +424,8 @@
 <header class="site-header">
     <div class="header-top">
         <a href="{% url 'index' %}" class="logo">
-            ANTI GRAVITY
-            <span>CIRCULAR WASTE INTELLIGENCE PLATFORM</span>
+            KERALA CIRCULAR EXCHANGE
+            <span>INDUSTRIAL WASTE INTELLIGENCE PLATFORM</span>
         </a>
 
         <div class="zone-picker" title="Active Regional Supply-Chain Zone">
@@ -447,7 +447,7 @@
                 {% endif %}
 
                 {% if request.user.company %}
-                    <span class="user-tag" title="{{ request.user.company.company_name }}">🏢 {{ request.user.company.company_name|truncatechars:16 }} ({{ request.user.company.get_user_type_display }})</span>
+                    <a href="{% url 'profile' %}" class="user-tag" title="View Enterprise Profile: {{ request.user.company.company_name }}">🏢 {{ request.user.company.company_name|truncatechars:16 }} ({{ request.user.company.get_user_type_display }})</a>
                     
                     {% if request.user.company.user_type == 'supplier' %}
                         <!-- SUPPLIER-ONLY: NEVER SHOW BUYER LINKS -->
@@ -456,7 +456,7 @@
                     {% elif request.user.company.user_type == 'buyer' %}
                         <!-- BUYER-ONLY: NEVER SHOW SUPPLIER LINKS -->
                         <a href="{% url 'buyer_orders' %}" style="font-weight:600; color:var(--amber);">📦 Orders & Tracking</a>
-                        <a href="{% url 'batch_cart' %}" class="cart-pill">Batch Cart</a>
+                        <a href="{% url 'cart_view' %}" class="cart-pill">🛒 Cart</a>
                     {% elif request.user.company.user_type == 'both' %}
                         <!-- DUAL ROLE: SWITCH BETWEEN MODES -->
                         <div class="role-switcher" title="Toggle active enterprise workspace">
@@ -468,20 +468,21 @@
                             <a href="{% url 'listing_create' %}" class="btn btn-primary btn-sm">+ List Waste</a>
                         {% else %}
                             <a href="{% url 'buyer_orders' %}" style="font-weight:600; color:var(--amber);">📦 Orders & Tracking</a>
-                            <a href="{% url 'batch_cart' %}" class="cart-pill">Batch Cart</a>
+                            <a href="{% url 'cart_view' %}" class="cart-pill">🛒 Cart</a>
                         {% endif %}
                     {% endif %}
                 {% else %}
-                    <span class="user-tag">{{ request.user.username }}</span>
+                    <a href="{% url 'profile' %}" class="user-tag">{{ request.user.username }}</a>
                     <a href="{% url 'buyer_orders' %}" style="font-weight:600; color:var(--amber);">📦 Orders</a>
-                    <a href="{% url 'batch_cart' %}" class="cart-pill">Batch Cart</a>
+                    <a href="{% url 'cart_view' %}" class="cart-pill">🛒 Cart</a>
                 {% endif %}
 
+                <a href="{% url 'profile' %}" style="color: #93c5fd; font-weight: 500;">Profile</a>
                 <a href="{% url 'logout' %}">Logout</a>
             {% else %}
                 <a href="{% url 'login' %}">Login</a>
                 <a href="{% url 'signup' %}" class="btn btn-primary btn-sm">Register Enterprise</a>
-                <a href="{% url 'batch_cart' %}" class="cart-pill">Batch Cart</a>
+                <a href="{% url 'cart_view' %}" class="cart-pill">🛒 Cart</a>
             {% endif %}
         </div>
     </div>
@@ -524,5 +525,21 @@
 </footer>
 
 {% block extra_js %}{% endblock %}
+
+<script>
+    // Preserve scroll position on form submissions and updates to avoid jumping to top
+    document.addEventListener("DOMContentLoaded", function () {
+        const scrollPos = sessionStorage.getItem("pageScrollPos");
+        if (scrollPos !== null && !window.location.hash) {
+            window.scrollTo({ top: parseInt(scrollPos, 10), behavior: "instant" });
+            sessionStorage.removeItem("pageScrollPos");
+        }
+        document.querySelectorAll("form").forEach(function(form) {
+            form.addEventListener("submit", function() {
+                sessionStorage.setItem("pageScrollPos", window.scrollY);
+            });
+        });
+    });
+</script>
 </body>
 </html>
