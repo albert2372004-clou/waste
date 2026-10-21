@@ -27,6 +27,11 @@ urlpatterns = [
         name='verify_otp'
     ),
     path(
+        'resend-otp/',
+        views.resend_otp,
+        name='resend_otp'
+    ),
+    path(
         'switch-mode/<str:mode>/',
         views.switch_mode,
         name='switch_mode'
@@ -47,8 +52,24 @@ urlpatterns = [
         name='reset_password_otp'
     ),
     path(
+        'set-new-password/',
+        views.set_new_password,
+        name='set_new_password'
+    ),
+    path(
+        'resend-reset-otp/',
+        views.resend_reset_otp,
+        name='resend_reset_otp'
+    ),
+    path(
         'profile/',
         views.profile_view,
         name='profile'
     ),
+    # Company Location & Godown / Warehouse Management
+    path('locations/', views.location_list, name='location_list'),
+    path('locations/create/', views.location_create, name='location_create'),
+    path('locations/<int:pk>/edit/', views.location_edit, name='location_edit'),
+    path('locations/<int:pk>/delete/', views.location_delete, name='location_delete'),
+    path('locations/<int:pk>/set-primary/', views.location_set_primary, name='location_set_primary'),
 ]

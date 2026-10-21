@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>{% block title %}Circular Waste Intelligence System — Industrial Byproduct Marketplace{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,33 +94,37 @@
             color: #fff;
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
         }
 
         .header-top {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 12px 24px;
-            max-width: 1280px;
+            gap: 12px;
+            padding: 10px 20px;
+            max-width: 1440px;
             margin: 0 auto;
-            flex-wrap: wrap;
+            width: 100%;
+            box-sizing: border-box;
+            flex-wrap: nowrap;
         }
 
         .logo {
             font-family: var(--font-display);
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             color: #fff;
             white-space: nowrap;
             display: flex;
             flex-direction: column;
             line-height: 1.1;
+            flex-shrink: 0;
         }
         .logo span {
             font-family: var(--font-mono);
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             font-weight: 500;
             color: var(--emerald);
             letter-spacing: 0.03em;
@@ -127,66 +132,78 @@
         }
 
         .zone-picker {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
             background: #1a2436;
             border: 1px solid #2d3a52;
             border-radius: var(--radius);
-            padding: 8px 12px;
-            font-size: 0.78rem;
+            padding: 6px 10px;
+            font-size: 0.74rem;
             color: var(--slate-300);
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .zone-picker strong { color: #fff; font-weight: 600; }
 
         .search-bar {
-            flex: 1 1 280px;
+            flex: 1 1 auto;
+            max-width: 320px;
+            min-width: 150px;
             display: flex;
-            min-width: 200px;
-            height: 38px;
+            height: 36px;
             border-radius: var(--radius);
             overflow: hidden;
             border: 1px solid #2d3a52;
+            background: #fff;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .search-bar:focus-within {
+            border-color: var(--emerald);
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.25);
         }
         .search-bar input {
             flex: 1;
             border: none;
-            padding: 0 12px;
-            font-size: 0.84rem;
+            padding: 0 10px;
+            font-size: 0.82rem;
             background: #fff;
             color: var(--slate-900);
+            min-width: 0;
         }
         .search-bar button {
             background: var(--emerald);
             color: #fff;
-            padding: 0 16px;
+            padding: 0 14px;
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             transition: background 0.15s;
+            flex-shrink: 0;
         }
         .search-bar button:hover { background: var(--emerald-dark); }
 
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 10px;
             font-size: 0.8rem;
             white-space: nowrap;
             margin-left: auto;
+            flex-shrink: 0;
         }
         .header-actions a { color: var(--slate-300); transition: color 0.15s; }
         .header-actions a:hover { color: #fff; }
 
         .role-switcher {
-            display: flex;
+            display: inline-flex;
             border: 1px solid #2d3a52;
             border-radius: var(--radius);
             overflow: hidden;
+            flex-shrink: 0;
         }
         .role-switcher a {
-            padding: 6px 11px;
-            font-size: 0.75rem;
+            padding: 5px 9px;
+            font-size: 0.72rem;
             color: var(--slate-300);
         }
         .role-switcher a.active {
@@ -196,14 +213,15 @@
         }
 
         .cart-pill {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             background: #1a2436;
             border: 1px solid #2d3a52;
-            padding: 7px 11px;
+            padding: 6px 10px;
             border-radius: var(--radius);
-            font-size: 0.78rem;
+            font-size: 0.76rem;
+            flex-shrink: 0;
         }
         .cart-pill .count {
             background: var(--amber);
@@ -217,12 +235,50 @@
 
         .user-tag {
             font-family: var(--font-mono);
-            font-size: 0.75rem;
+            font-size: 0.74rem;
             color: var(--slate-300);
             background: #1e293b;
-            padding: 5px 9px;
+            padding: 5px 8px;
             border-radius: var(--radius);
             border: 1px solid #334155;
+            max-width: 170px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        /* Mobile Hamburger Toggle */
+        .mobile-nav-toggle {
+            display: none;
+            background: none;
+            border: 1px solid #334155;
+            border-radius: var(--radius);
+            padding: 6px 8px;
+            cursor: pointer;
+            color: #fff;
+            margin-left: auto;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hamburger-bar {
+            width: 20px;
+            height: 2px;
+            background: #fff;
+            display: block;
+            border-radius: 1px;
+            transition: 0.2s;
+        }
+
+        .mobile-nav-menu {
+            display: none;
+            background: #0d1522;
+            border-top: 1px solid #1e293b;
+            padding: 14px 20px;
+            flex-direction: column;
+            gap: 10px;
         }
 
         /* ---- Category Ribbon ---- */
@@ -409,19 +465,13 @@
             border-top: 1px solid #1e293b;
         }
         .site-footer a { color: var(--emerald); }
-
-        @media (max-width: 768px) {
-            .header-top { gap: 10px; }
-            .search-bar { order: 3; flex: 1 1 100%; }
-            .header-actions { margin-left: 0; }
-        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
 <!-- ============ HEADER ============ -->
-<header class="site-header">
+<header class="site-header" id="main-site-header">
     <div class="header-top">
         <a href="{% url 'index' %}" class="logo">
             KERALA CIRCULAR EXCHANGE
@@ -429,45 +479,45 @@
         </a>
 
         <div class="zone-picker" title="Active Regional Supply-Chain Zone">
-            Zone: <strong>Kerala Industrial Corridor (Kochi–Palakkad)</strong>
+            📍 <strong>Kerala Industrial Corridor</strong>
         </div>
 
         <form class="search-bar" action="{% url 'index' %}" method="GET" role="search">
-            <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search Kerala material, byproduct stream, or supplier...">
+            <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search material, byproduct, or supplier...">
             <button type="submit">Search</button>
         </form>
 
         <div class="header-actions">
-            <a href="{% url 'funding_list' %}" style="color: #6ee7b7; font-weight: 500; font-size: 0.8rem;">🌱 Circular Funding</a>
+            <a href="{% url 'funding_list' %}" style="color: #6ee7b7; font-weight: 500; font-size: 0.8rem;">🌱 Funding</a>
 
             {% if request.user.is_authenticated %}
                 {% if request.user.is_superuser or request.user.is_staff %}
-                    <a href="{% url 'verification_panel' %}">Admin Hub</a>
+                    <a href="{% url 'verification_panel' %}">Admin</a>
                     <a href="{% url 'custom_admin_dashboard' %}">Analytics</a>
                 {% endif %}
 
                 {% if request.user.company %}
-                    <a href="{% url 'profile' %}" class="user-tag" title="View Enterprise Profile: {{ request.user.company.company_name }}">🏢 {{ request.user.company.company_name|truncatechars:16 }} ({{ request.user.company.get_user_type_display }})</a>
+                    <a href="{% url 'profile' %}" class="user-tag" title="Enterprise Profile: {{ request.user.company.company_name }}">🏢 {{ request.user.company.company_name|truncatechars:14 }} ({{ request.user.company.get_user_type_display }})</a>
                     
                     {% if request.user.company.user_type == 'supplier' %}
-                        <!-- SUPPLIER-ONLY: NEVER SHOW BUYER LINKS -->
+                        <!-- SUPPLIER-ONLY -->
                         <a href="{% url 'dashboard' %}" style="font-weight:600; color:var(--emerald);">Supplier Hub</a>
                         <a href="{% url 'listing_create' %}" class="btn btn-primary btn-sm">+ List Waste</a>
                     {% elif request.user.company.user_type == 'buyer' %}
-                        <!-- BUYER-ONLY: NEVER SHOW SUPPLIER LINKS -->
-                        <a href="{% url 'buyer_orders' %}" style="font-weight:600; color:var(--amber);">📦 Orders & Tracking</a>
+                        <!-- BUYER-ONLY -->
+                        <a href="{% url 'buyer_orders' %}" style="font-weight:600; color:var(--amber);">📦 Orders</a>
                         <a href="{% url 'cart_view' %}" class="cart-pill">🛒 Cart</a>
                     {% elif request.user.company.user_type == 'both' %}
-                        <!-- DUAL ROLE: SWITCH BETWEEN MODES -->
+                        <!-- DUAL ROLE -->
                         <div class="role-switcher" title="Toggle active enterprise workspace">
-                            <a href="{% url 'switch_mode' 'buyer' %}" class="{% if request.session.active_mode != 'supplier' %}active{% endif %}">Buyer Mode</a>
-                            <a href="{% url 'switch_mode' 'supplier' %}" class="{% if request.session.active_mode == 'supplier' %}active{% endif %}">Supplier Mode</a>
+                            <a href="{% url 'switch_mode' 'buyer' %}" class="{% if request.session.active_mode != 'supplier' %}active{% endif %}">Buyer</a>
+                            <a href="{% url 'switch_mode' 'supplier' %}" class="{% if request.session.active_mode == 'supplier' %}active{% endif %}">Supplier</a>
                         </div>
                         {% if request.session.active_mode == 'supplier' %}
                             <a href="{% url 'dashboard' %}" style="font-weight:600; color:var(--emerald);">Supplier Hub</a>
                             <a href="{% url 'listing_create' %}" class="btn btn-primary btn-sm">+ List Waste</a>
                         {% else %}
-                            <a href="{% url 'buyer_orders' %}" style="font-weight:600; color:var(--amber);">📦 Orders & Tracking</a>
+                            <a href="{% url 'buyer_orders' %}" style="font-weight:600; color:var(--amber);">📦 Orders</a>
                             <a href="{% url 'cart_view' %}" class="cart-pill">🛒 Cart</a>
                         {% endif %}
                     {% endif %}
@@ -485,6 +535,65 @@
                 <a href="{% url 'cart_view' %}" class="cart-pill">🛒 Cart</a>
             {% endif %}
         </div>
+
+        <!-- Mobile Navigation Toggle -->
+        <button type="button" class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation menu">
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+        </button>
+    </div>
+
+    <!-- Mobile Navigation Dropdown Menu -->
+    <div class="mobile-nav-menu" id="mobile-nav-menu">
+        <form class="search-bar" action="{% url 'index' %}" method="GET" role="search" style="margin-bottom: 6px;">
+            <input type="text" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search material, byproduct, or supplier...">
+            <button type="submit">Search</button>
+        </form>
+
+        <div class="mobile-links">
+            <a href="{% url 'funding_list' %}">🌱 Circular Funding</a>
+
+            {% if request.user.is_authenticated %}
+                {% if request.user.is_superuser or request.user.is_staff %}
+                    <a href="{% url 'verification_panel' %}">Admin Hub</a>
+                    <a href="{% url 'custom_admin_dashboard' %}">Analytics</a>
+                {% endif %}
+
+                {% if request.user.company %}
+                    {% if request.user.company.user_type == 'supplier' %}
+                        <a href="{% url 'dashboard' %}" style="color: var(--emerald); font-weight: 600;">Supplier Hub</a>
+                        <a href="{% url 'listing_create' %}">+ List Waste Stream</a>
+                    {% elif request.user.company.user_type == 'buyer' %}
+                        <a href="{% url 'buyer_orders' %}" style="color: var(--amber); font-weight: 600;">📦 Orders &amp; Tracking</a>
+                        <a href="{% url 'cart_view' %}">🛒 Shopping Cart</a>
+                    {% elif request.user.company.user_type == 'both' %}
+                        <div style="display: flex; gap: 8px; margin: 4px 0;">
+                            <a href="{% url 'switch_mode' 'buyer' %}" style="flex: 1; text-align: center; {% if request.session.active_mode != 'supplier' %}background: var(--emerald); color: #fff; font-weight: 600;{% endif %}">Buyer Mode</a>
+                            <a href="{% url 'switch_mode' 'supplier' %}" style="flex: 1; text-align: center; {% if request.session.active_mode == 'supplier' %}background: var(--emerald); color: #fff; font-weight: 600;{% endif %}">Supplier Mode</a>
+                        </div>
+                        {% if request.session.active_mode == 'supplier' %}
+                            <a href="{% url 'dashboard' %}" style="color: var(--emerald); font-weight: 600;">Supplier Hub</a>
+                            <a href="{% url 'listing_create' %}">+ List Waste Stream</a>
+                        {% else %}
+                            <a href="{% url 'buyer_orders' %}" style="color: var(--amber); font-weight: 600;">📦 Orders &amp; Tracking</a>
+                            <a href="{% url 'cart_view' %}">🛒 Shopping Cart</a>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'buyer_orders' %}">📦 Orders</a>
+                    <a href="{% url 'cart_view' %}">🛒 Cart</a>
+                {% endif %}
+
+                <a href="{% url 'profile' %}" style="color: #93c5fd; font-weight: 600;">🏢 Enterprise Profile &amp; Godowns</a>
+                <a href="{% url 'logout' %}" style="color: #f87171;">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+                <a href="{% url 'signup' %}">Register Enterprise</a>
+                <a href="{% url 'cart_view' %}">🛒 Cart</a>
+            {% endif %}
+        </div>
+    </div>
     </div>
 
     <nav class="category-ribbon" aria-label="Material categories">
@@ -524,11 +633,21 @@
     </div>
 </footer>
 
+{% include 'includes/location_picker_modal.html' %}
+
 {% block extra_js %}{% endblock %}
 
 <script>
     // Preserve scroll position on form submissions and updates to avoid jumping to top
     document.addEventListener("DOMContentLoaded", function () {
+        const mobileToggle = document.getElementById('mobile-nav-toggle');
+        const header = document.getElementById('main-site-header');
+        if (mobileToggle && header) {
+            mobileToggle.addEventListener('click', function() {
+                header.classList.toggle('nav-open');
+            });
+        }
+
         const scrollPos = sessionStorage.getItem("pageScrollPos");
         if (scrollPos !== null && !window.location.hash) {
             window.scrollTo({ top: parseInt(scrollPos, 10), behavior: "instant" });

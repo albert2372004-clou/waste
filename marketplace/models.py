@@ -58,6 +58,14 @@ class MaterialListing(models.Model):
     ]
 
     supplier = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="listings")
+    warehouse = models.ForeignKey(
+        'accounts.CompanyLocation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="listings",
+        help_text="Dispatch godown/warehouse facility where this byproduct batch is stored"
+    )
     category_ref = models.ForeignKey(MaterialCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="listings")
     material_name = models.CharField(max_length=255)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="rubber")
@@ -266,6 +274,18 @@ class ProcurementRequest(models.Model):
     buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="requests")
     buyer_company = models.ForeignKey(Company, on_delete=models.SET_NULL, null=True, blank=True, related_name="procurement_orders")
     listing = models.ForeignKey(MaterialListing, on_delete=models.CASCADE, related_name="requests")
+    delivery_location = models.ForeignKey(
+        'accounts.CompanyLocation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deliveries",
+        help_text="Buyer destination godown / facility"
+    )
+    delivery_latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    delivery_longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    origin_latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    origin_longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
     volume_requested = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default="pending")
     notes = models.TextField(blank=True, default="")

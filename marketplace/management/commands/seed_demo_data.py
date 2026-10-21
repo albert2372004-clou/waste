@@ -93,7 +93,8 @@ class Command(BaseCommand):
 
         # 2. Users & Companies (Kerala Industrial Corridor)
         # Supplier 1: Kerala Rubber Reprocessors (Kottayam)
-        u1, _ = User.objects.get_or_create(username="kerala_rubber", defaults={"email": "rubber@keralareclaim.com"})
+        u1, _ = User.objects.get_or_create(username="kerala_rubber")
+        u1.email = "itpathfinder451@gmail.com"
         u1.set_password("Supplier123#")
         u1.save()
         c1 = create_or_update_company(
@@ -105,12 +106,14 @@ class Command(BaseCommand):
                 "address": "Kottayam Rubber Industrial Park, Kottayam, Kerala",
                 "user_type": "supplier",
                 "verification_status": "auto_verified",
+                "is_email_verified": True,
                 "verified_at": timezone.now()
             }
         )
 
         # Supplier 2 / Dual Enterprise: Malabar Coir & Bio-Carbon (Alappuzha) - Both Buyer and Supplier!
-        u2, _ = User.objects.get_or_create(username="malabar_coir", defaults={"email": "sales@malabarcoir.com"})
+        u2, _ = User.objects.get_or_create(username="malabar_coir")
+        u2.email = "sebastiankunjumon542@gmail.com"
         u2.set_password("Supplier123#")
         u2.save()
         c2 = create_or_update_company(
@@ -122,12 +125,14 @@ class Command(BaseCommand):
                 "address": "Coir Industrial Zone, Alappuzha, Kerala",
                 "user_type": "both",  # Dual role enterprise
                 "verification_status": "manual_approved",
+                "is_email_verified": True,
                 "verified_at": timezone.now()
             }
         )
 
         # Supplier 3: Cochin Technical Polymers (Kochi)
-        u3, _ = User.objects.get_or_create(username="cochin_polymers", defaults={"email": "info@cochinpolymers.com"})
+        u3, _ = User.objects.get_or_create(username="cochin_polymers")
+        u3.email = "ovel7814@gmail.com"
         u3.set_password("Supplier123#")
         u3.save()
         c3 = create_or_update_company(
@@ -139,12 +144,14 @@ class Command(BaseCommand):
                 "address": "Kochi Petrochemical Corridor, Willingdon Island, Kochi, Kerala",
                 "user_type": "supplier",
                 "verification_status": "auto_verified",
+                "is_email_verified": True,
                 "verified_at": timezone.now()
             }
         )
 
         # Buyer 1: Travancore Infrastructure & Highway Works (Palakkad Corridor)
-        u_buyer, _ = User.objects.get_or_create(username="travancore_infra", defaults={"email": "procurement@travancoreinfra.com"})
+        u_buyer, _ = User.objects.get_or_create(username="travancore_infra")
+        u_buyer.email = "sebualen392@gmail.com"
         u_buyer.set_password("Buyer123#")
         u_buyer.save()
         c_buyer = create_or_update_company(
@@ -156,6 +163,7 @@ class Command(BaseCommand):
                 "address": "KINFRA Integrated Industrial Park, Kanjikode, Palakkad, Kerala",
                 "user_type": "buyer",
                 "verification_status": "auto_verified",
+                "is_email_verified": True,
                 "verified_at": timezone.now()
             }
         )

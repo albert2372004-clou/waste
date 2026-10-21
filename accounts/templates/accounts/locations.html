@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Facilities &amp; Godowns — Circular Waste Platform{% endblock %}
+
+{% block content %}
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">{% if is_supplier %}Warehouses &amp; Production Facilities{% else %}Storage Godowns &amp; Receiving Points{% endif %}</h1>
+            <div class="breadcrumb">
+                <a href="{% if is_supplier %}{% url 'dashboard' %}{% else %}{% url 'profile' %}{% endif %}">Dashboard</a> / Locations
+            </div>
+        </div>
+        <div>
+            <a href="{% url 'location_create' %}?next={{ request.path }}" class="btn btn-primary btn-sm">
+                + Add {% if is_supplier %}Warehouse{% else %}Godown{% endif %}
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px; padding-bottom: 60px;">
+    <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--slate-200); padding-bottom: 12px;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.1rem;">Registered Operating Locations</h3>
+                <p style="font-size: 0.8rem; color: var(--slate-500); margin-top: 4px;">
+                    Manage your active dispatch points, processing units, or receiving godowns.
+                </p>
+            </div>
+            <span class="mono" style="font-size: 0.85rem; font-weight: 700; color: var(--slate-700);">
+                {{ locations|length }} Location{{ locations|length|pluralize }}
+            </span>
+        </div>
+
+        {% if locations %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+            {% for loc in locations %}
+            <div style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <h4 style="margin: 0; font-size: 1rem; color: var(--slate-900);">
+                            {{ loc.location_name }}
+                        </h4>
+                        {% if loc.is_primary %}
+                            <span class="status-pill ok" style="font-size: 0.68rem; padding: 2px 8px;">Primary Hub</span>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;">
+                        <span class="tag" style="font-size: 0.72rem;">{{ loc.get_location_type_display }}</span>
+                        {% if loc.has_coordinates %}
+                            <span class="mono" style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 3px;">
+                                📍 {{ loc.latitude|floatformat:4 }}, {{ loc.longitude|floatformat:4 }}
+                            </span>
+                        {% else %}
+                            <span style="font-size: 0.72rem; color: var(--amber); background: var(--amber-tint); padding: 2px 6px; border-radius: 3px;">
+                                ⚠️ No map pin set
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <p style="font-size: 0.82rem; color: var(--slate-600); line-height: 1.4; margin-bottom: 12px;">
+                        {{ loc.address }}
+                    </p>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--slate-200); padding-top: 10px; margin-top: 8px;">
+                    <div>
+                        {% if not loc.is_primary %}
+                        <form method="POST" action="{% url 'location_set_primary' pk=loc.pk %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 3px 8px;">
+                                Make Primary
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <a href="{% url 'location_edit' pk=loc.pk %}?next={{ request.path }}" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
+                            Edit
+                        </a>
+                        <form method="POST" action="{% url 'location_delete' pk=loc.pk %}" onsubmit="return confirm('Are you sure you want to delete {{ loc.location_name }}?');" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: #fecaca; font-size: 0.75rem; padding: 4px 8px;" title="Delete location">
+                                &times;
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 48px 24px; color: var(--slate-500);">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">📍</div>
+            <p style="font-size: 0.95rem; margin-bottom: 12px;">No locations registered yet.</p>
+            <a href="{% url 'location_create' %}?next={{ request.path }}" class="btn btn-primary btn-sm">
+                + Register First Location
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

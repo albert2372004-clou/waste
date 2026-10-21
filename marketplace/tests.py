@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from decimal import Decimal
 
-from accounts.models import Company
+from accounts.models import Company, CompanyLocation
 from marketplace.models import (
     MaterialCategory,
     MaterialListing,
@@ -54,10 +54,30 @@ class MarketplaceCoreEngineTests(TestCase):
             user_type="buyer",
             verification_status="auto_verified"
         )
+        self.buyer_location = CompanyLocation.objects.create(
+            company=self.buyer_company,
+            location_name="Palakkad Receiving Godown",
+            location_type="godown",
+            address="KINFRA Park, Palakkad, Kerala",
+            latitude=Decimal("10.7867"),
+            longitude=Decimal("76.6548"),
+            is_primary=True
+        )
+
+        self.supplier_location = CompanyLocation.objects.create(
+            company=self.supplier_company,
+            location_name="Kottayam Main Warehouse",
+            location_type="warehouse",
+            address="Kottayam Industrial Area, Kerala",
+            latitude=Decimal("9.5916"),
+            longitude=Decimal("76.5222"),
+            is_primary=True
+        )
 
         # Create Material Listing
         self.listing = MaterialListing.objects.create(
             supplier=self.supplier_company,
+            warehouse=self.supplier_location,
             material_name="Industrial Tyre Crumb Rubber",
             category="rubber",
             category_ref=self.category,

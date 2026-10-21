@@ -138,6 +138,105 @@
             {% endif %}
         </div>
 
+        <!-- Section: Factory & Warehouse Locations -->
+        <div id="warehouses" class="panel" style="margin-bottom: 22px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div>
+                    <h3 style="margin: 0;">🏭 Factory &amp; Warehouse Facilities</h3>
+                    <span style="font-size: 0.78rem; color: var(--slate-500);">
+                        Manage dispatch warehouses and physical facilities with OpenStreetMap Leaflet coordinates
+                    </span>
+                </div>
+                <div>
+                    <a href="{% url 'location_create' %}?next={{ request.path }}" class="btn btn-primary btn-sm">
+                        + Add Another Warehouse
+                    </a>
+                </div>
+            </div>
+
+            {% if locations %}
+            <div style="overflow-x: auto; margin-top: 14px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Facility Name</th>
+                            <th>Facility Type</th>
+                            <th>Physical Address</th>
+                            <th class="mono">Coordinates (OSM)</th>
+                            <th>Primary Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loc in locations %}
+                        <tr>
+                            <td>
+                                <strong>{{ loc.location_name }}</strong>
+                            </td>
+                            <td>
+                                <span class="tag" style="font-size: 0.72rem;">{{ loc.get_location_type_display }}</span>
+                            </td>
+                            <td style="font-size: 0.82rem; color: var(--slate-600); max-width: 280px;">
+                                {{ loc.address }}
+                            </td>
+                            <td class="mono" style="font-size: 0.78rem;">
+                                {% if loc.has_coordinates %}
+                                    <span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 3px;">
+                                        📍 {{ loc.latitude|floatformat:4 }}, {{ loc.longitude|floatformat:4 }}
+                                    </span>
+                                {% else %}
+                                    <span style="color: var(--amber); background: var(--amber-tint); padding: 2px 6px; border-radius: 3px; font-size: 0.72rem;">
+                                        ⚠️ Map pin not set
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loc.is_primary %}
+                                    <span class="status-pill ok" style="font-size: 0.7rem; padding: 2px 8px;">Primary Warehouse</span>
+                                {% else %}
+                                    <form method="POST" action="{% url 'location_set_primary' pk=loc.pk %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline btn-sm" style="font-size: 0.7rem; padding: 2px 6px;">
+                                            Set Primary
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <button type="button" class="btn btn-outline btn-sm btn-quick-map-wh"
+                                            style="color: var(--emerald-dark); border-color: var(--emerald); font-size: 0.72rem; padding: 3px 8px;"
+                                            data-loc-id="{{ loc.pk }}"
+                                            data-loc-name="{{ loc.location_name }}"
+                                            data-loc-address="{{ loc.address }}"
+                                            data-loc-lat="{{ loc.latitude|default:'' }}"
+                                            data-loc-lng="{{ loc.longitude|default:'' }}"
+                                            data-loc-type="{{ loc.location_type }}"
+                                            title="Update coordinates on map">
+                                        📍 Map
+                                    </button>
+                                    <a href="{% url 'location_edit' pk=loc.pk %}?next={{ request.path }}" class="btn btn-outline btn-sm">Edit</a>
+                                    <form method="POST" action="{% url 'location_delete' pk=loc.pk %}" onsubmit="return confirm('Delete warehouse \'{{ loc.location_name }}\'?');" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: #fecaca;" title="Delete warehouse">
+                                            &times;
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 24px; color: var(--slate-500);">
+                No warehouses registered yet. 
+                <a href="{% url 'location_create' %}?next={{ request.path }}" style="color: var(--emerald); font-weight: 600;">Register your first warehouse &rarr;</a>
+            </div>
+            {% endif %}
+        </div>
+
         <!-- Section: Supply Aggregation Pools -->
         <div id="pools" class="panel" style="margin-bottom: 22px;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
@@ -333,4 +432,53 @@
 
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('.btn-quick-map-wh').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const locId = btn.dataset.locId;
+            const locName = btn.dataset.locName;
+            const initialAddress = btn.dataset.locAddress;
+            const initialLat = btn.dataset.locLat;
+            const initialLng = btn.dataset.locLng;
+            const locType = btn.dataset.locType || 'warehouse';
+
+            window.openLocationPicker({
+                initialLat: initialLat || null,
+                initialLng: initialLng || null,
+                initialAddress: initialAddress || "",
+                title: `Update Location for "${locName}"`,
+                onConfirm: function (data) {
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                    formData.append('location_name', locName);
+                    formData.append('location_type', locType);
+                    formData.append('address', data.address);
+                    formData.append('latitude', data.latitude);
+                    formData.append('longitude', data.longitude);
+                    formData.append('is_ajax', '1');
+
+                    fetch(`/accounts/locations/${locId}/edit/`, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        body: formData
+                    })
+                    .then(function (res) {
+                        if (res.ok) {
+                            alert(`Warehouse location for "${locName}" updated successfully!`);
+                            window.location.reload();
+                        } else {
+                            window.location.reload();
+                        }
+                    })
+                    .catch(function () {
+                        window.location.reload();
+                    });
+                }
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="wrap" style="padding: 40px 24px;">
-    <div class="panel" style="max-width: 680px; margin: 0 auto; padding: 36px 32px;">
+    <div class="panel" style="max-width: 720px; margin: 0 auto; padding: 36px 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
             <span class="status-pill ok" style="margin-bottom: 8px;">Enterprise Verification Protocol</span>
             <h1 style="font-size: var(--step-3); margin-top: 6px;">Register Your Company</h1>
@@ -17,7 +17,7 @@
             <strong>Automated Permit Verification:</strong> Upload your company registration certificate or environmental permit (PDF/Image). Valid documentation triggers automated preliminary verification.
         </div>
 
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" id="registration-form">
             {% csrf_token %}
 
             {% if form.non_field_errors %}
@@ -25,6 +25,11 @@
                     {{ form.non_field_errors }}
                 </div>
             {% endif %}
+
+            <!-- Account Information -->
+            <h3 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--slate-700); margin-bottom: 12px; border-bottom: 1px solid var(--slate-200); padding-bottom: 6px;">
+                1. Account Credentials
+            </h3>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div>
@@ -52,7 +57,12 @@
                 </div>
             </div>
 
-            <div style="margin-top: 14px;">
+            <!-- Company Information -->
+            <h3 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--slate-700); margin: 24px 0 12px; border-bottom: 1px solid var(--slate-200); padding-bottom: 6px;">
+                2. Company Details &amp; Governance
+            </h3>
+
+            <div>
                 <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Company Legal Name *</label>
                 {{ form.company_name }}
                 {% if form.company_name.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.company_name.errors }}</div>{% endif %}
@@ -101,12 +111,40 @@
             </div>
 
             <div style="margin-top: 14px;">
-                <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Operating Facility / Registered Address *</label>
+                <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Registered Office Address *</label>
                 {{ form.address }}
                 {% if form.address.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:4px;">{{ form.address.errors }}</div>{% endif %}
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 24px; padding: 13px; font-size: 0.95rem;">
+            <!-- 3. Dynamic Godowns / Warehouses Section -->
+            <div style="margin-top: 28px; border-top: 2px solid var(--slate-200); padding-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                    <div>
+                        <h3 id="loc-section-title" style="font-size: 1.05rem; margin: 0; color: var(--slate-900);">
+                            Warehouse &amp; Factory Locations
+                        </h3>
+                        <p id="loc-section-sub" style="font-size: 0.78rem; color: var(--slate-500); margin-top: 4px;">
+                            Suppliers must have at least one valid warehouse location before publishing a waste listing. Use the map picker for exact coordinates.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Locations Container -->
+                <div id="locations-container" style="display: flex; flex-direction: column; gap: 14px; margin-top: 14px;">
+                    <!-- Dynamically populated or rendered by JavaScript below -->
+                </div>
+
+                <div style="margin-top: 14px;">
+                    <button type="button" id="btn-add-location" class="btn btn-outline btn-sm" style="font-size: 0.85rem; padding: 7px 14px;">
+                        + Add Another Warehouse
+                    </button>
+                    <span id="buyer-skip-note" style="font-size: 0.75rem; color: var(--slate-500); margin-left: 10px; display: none;">
+                        (Buyers can skip adding godowns now and manage them anytime from the dashboard)
+                    </span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="margin-top: 32px; padding: 13px; font-size: 0.95rem;">
                 Submit Company Registration
             </button>
         </form>
@@ -127,10 +165,174 @@
         font-size: 0.85rem;
         background: #fff;
     }
-    textarea { min-height: 80px; resize: vertical; }
+    textarea { min-height: 70px; resize: vertical; }
     input:focus, select:focus, textarea:focus {
         outline: 2px solid var(--emerald);
         border-color: var(--emerald);
     }
+    .loc-card {
+        background: var(--paper);
+        border: 1px solid var(--slate-200);
+        border-radius: 6px;
+        padding: 16px;
+        position: relative;
+        transition: border-color 0.15s;
+    }
+    .loc-card:hover {
+        border-color: var(--slate-300);
+    }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const userTypeSelect = document.getElementById("id_user_type");
+    const container = document.getElementById("locations-container");
+    const addBtn = document.getElementById("btn-add-location");
+    const titleEl = document.getElementById("loc-section-title");
+    const subEl = document.getElementById("loc-section-sub");
+    const buyerSkipNote = document.getElementById("buyer-skip-note");
+    let locIndex = 0;
+
+    function createLocationCard(role, isPrimary, canRemove) {
+        const id = locIndex++;
+        const isSupplier = (role === 'supplier' || role === 'both');
+        const defaultName = isSupplier ? (id === 0 ? "Main Factory / Warehouse" : `Warehouse Facility ${id + 1}`) : (id === 0 ? "Primary Godown" : `Storage Godown ${id + 1}`);
+        const defaultType = isSupplier ? 'warehouse' : 'godown';
+
+        const card = document.createElement("div");
+        card.className = "loc-card";
+        card.id = `loc-card-${id}`;
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--slate-200); padding-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 0.82rem; cursor: pointer; color: var(--slate-800);">
+                        <input type="radio" name="loc_primary" value="${id}" ${isPrimary ? 'checked' : ''} style="width: auto;">
+                        <span class="loc-card-badge">Primary ${isSupplier ? 'Warehouse' : 'Godown'}</span>
+                    </label>
+                </div>
+                <div>
+                    ${canRemove ? `<button type="button" class="btn-remove-loc" style="color: var(--danger); font-size: 0.78rem; font-weight: 600; cursor: pointer; background: none; border: none;">&times; Remove</button>` : ''}
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 140px; gap: 12px; margin-bottom: 10px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:4px; color:var(--slate-700);">Facility / Godown Name *</label>
+                    <input type="text" name="loc_name[]" class="loc-name-field" value="${defaultName}" placeholder="e.g. Aluva Godown">
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:4px; color:var(--slate-700);">Type</label>
+                    <select name="loc_type[]" class="loc-type-field">
+                        <option value="warehouse" ${defaultType === 'warehouse' ? 'selected' : ''}>Warehouse / Hub</option>
+                        <option value="godown" ${defaultType === 'godown' ? 'selected' : ''}>Storage Godown</option>
+                        <option value="factory">Factory / Plant</option>
+                        <option value="processing_unit">Processing Unit</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="font-weight:600; font-size:0.78rem; color:var(--slate-700); margin:0;">Facility Physical Address *</label>
+                    <button type="button" class="btn btn-primary btn-sm btn-card-map" style="font-size:0.74rem; padding:3px 8px;">
+                        📍 Select Location on Map
+                    </button>
+                </div>
+                <textarea name="loc_address[]" class="loc-addr-field" rows="2" placeholder="Facility physical street, plot or industrial corridor address..."></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.74rem; margin-bottom:4px; color:var(--slate-600);">Latitude Coordinate</label>
+                    <input type="text" name="loc_lat[]" class="loc-lat-field mono" placeholder="e.g. 10.026100" readonly style="background:#f8fafc;">
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.74rem; margin-bottom:4px; color:var(--slate-600);">Longitude Coordinate</label>
+                    <input type="text" name="loc_lng[]" class="loc-lng-field mono" placeholder="e.g. 76.312500" readonly style="background:#f8fafc;">
+                </div>
+            </div>
+        `;
+
+        // Attach Remove Event
+        const removeBtn = card.querySelector('.btn-remove-loc');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function () {
+                card.remove();
+                // Ensure at least one remaining radio is primary
+                const remaining = container.querySelectorAll('input[name="loc_primary"]');
+                const anyChecked = Array.from(remaining).some(r => r.checked);
+                if (!anyChecked && remaining.length > 0) {
+                    remaining[0].checked = true;
+                }
+            });
+        }
+
+        // Attach Map Picker Event
+        const mapBtn = card.querySelector('.btn-card-map');
+        const latInput = card.querySelector('.loc-lat-field');
+        const lngInput = card.querySelector('.loc-lng-field');
+        const addrInput = card.querySelector('.loc-addr-field');
+        const nameInput = card.querySelector('.loc-name-field');
+
+        mapBtn.addEventListener('click', function () {
+            window.openLocationPicker({
+                initialLat: latInput.value,
+                initialLng: lngInput.value,
+                initialAddress: addrInput.value,
+                title: `Select Location for ${nameInput.value || 'Facility'}`,
+                onConfirm: function (data) {
+                    latInput.value = data.latitude;
+                    lngInput.value = data.longitude;
+                    addrInput.value = data.address;
+                    if (!nameInput.value || nameInput.value.includes("Facility") || nameInput.value.includes("Godown")) {
+                        const firstWord = data.address.split(',')[0].trim();
+                        nameInput.value = firstWord + (isSupplier ? " Warehouse" : " Godown");
+                    }
+                }
+            });
+        });
+
+        container.appendChild(card);
+    }
+
+    function syncUserType() {
+        const role = userTypeSelect ? userTypeSelect.value : 'supplier';
+        container.innerHTML = "";
+        locIndex = 0;
+
+        if (role === 'buyer') {
+            titleEl.textContent = "Storage Godown Locations (Optional)";
+            subEl.textContent = "Buyers can register one or more delivery godowns now using the map, or skip and add them later from the dashboard.";
+            addBtn.textContent = "+ Add Another Godown";
+            buyerSkipNote.style.display = "inline";
+            // For buyer, provide 1 initial godown card with remove button (allowing skip)
+            createLocationCard('buyer', true, true);
+        } else if (role === 'supplier') {
+            titleEl.textContent = "Factory / Warehouse Locations";
+            subEl.textContent = "Suppliers must have at least one valid warehouse location before publishing waste listings. Add your primary warehouse now.";
+            addBtn.textContent = "+ Add Another Warehouse";
+            buyerSkipNote.style.display = "none";
+            // For supplier, 1 initial primary warehouse (can remove subsequent ones)
+            createLocationCard('supplier', true, false);
+        } else {
+            titleEl.textContent = "Operating Facilities, Warehouses & Godowns";
+            subEl.textContent = "Manage operating facilities for your dual-role trading enterprise.";
+            addBtn.textContent = "+ Add Another Facility";
+            buyerSkipNote.style.display = "none";
+            createLocationCard('both', true, false);
+        }
+    }
+
+    if (userTypeSelect) {
+        userTypeSelect.addEventListener('change', syncUserType);
+        syncUserType();
+    }
+
+    addBtn.addEventListener('click', function () {
+        const role = userTypeSelect ? userTypeSelect.value : 'supplier';
+        createLocationCard(role, false, true);
+    });
+});
+</script>
 {% endblock %}

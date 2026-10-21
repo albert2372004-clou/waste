@@ -157,6 +157,176 @@
             {% endif %}
         </div>
 
+        <!-- 2. Manage My Godowns / Warehouses Section -->
+        <div class="panel" id="manage-locations-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--slate-200); padding-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.05rem;">
+                        {% if company.can_sell and not company.can_buy %}
+                            🏭 Manage My Warehouses &amp; Facilities
+                        {% elif company.can_buy and not company.can_sell %}
+                            📦 Manage My Godowns &amp; Receiving Facilities
+                        {% else %}
+                            🏢 Manage My Operating Godowns &amp; Warehouses
+                        {% endif %}
+                    </h3>
+                    <span style="font-size: 0.75rem; color: var(--slate-500);">
+                        View, update, and manage your operating facilities with OpenStreetMap coordinates for accurate transport corridor freight quotes.
+                    </span>
+                </div>
+                <div>
+                    <a href="{% url 'location_create' %}?next={{ request.path }}" class="btn btn-primary btn-sm">
+                        + Add Another {% if company.can_sell and not company.can_buy %}Warehouse{% else %}Godown{% endif %}
+                    </a>
+                </div>
+            </div>
+
+            {% if locations %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+                {% for loc in locations %}
+                <div class="loc-profile-card" id="loc-card-{{ loc.pk }}" style="background: var(--paper); border: 1px solid var(--slate-200); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div>
+                                <h4 style="margin: 0; font-size: 0.98rem; color: var(--slate-900);" id="loc-name-display-{{ loc.pk }}">
+                                    {{ loc.location_name }}
+                                </h4>
+                                <span class="tag" style="font-size: 0.68rem; margin-top: 3px; display: inline-block;">{{ loc.get_location_type_display }}</span>
+                            </div>
+                            <div>
+                                {% if loc.is_primary %}
+                                    <span class="status-pill ok" style="font-size: 0.68rem; padding: 2px 8px;">Default Facility</span>
+                                {% else %}
+                                    <form method="POST" action="{% url 'location_set_primary' pk=loc.pk %}?next={{ request.path }}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline btn-sm" style="font-size: 0.68rem; padding: 2px 7px;">
+                                            Set Default
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div style="margin: 10px 0;">
+                            <div style="font-size: 0.75rem; color: var(--slate-500); margin-bottom: 2px;">Physical Address:</div>
+                            <p style="font-size: 0.82rem; color: var(--slate-700); margin: 0; line-height: 1.4;" id="loc-address-display-{{ loc.pk }}">
+                                {{ loc.address }}
+                            </p>
+                        </div>
+
+                        <div style="margin-bottom: 12px;" id="loc-coords-container-{{ loc.pk }}">
+                            {% if loc.has_coordinates %}
+                                <span class="mono" style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 3px; display: inline-flex; align-items: center; gap: 4px;">
+                                    📍 Lat: {{ loc.latitude|floatformat:4 }}, Lng: {{ loc.longitude|floatformat:4 }}
+                                </span>
+                            {% else %}
+                                <span style="font-size: 0.72rem; color: var(--amber); background: var(--amber-tint); padding: 2px 7px; border-radius: 3px;">
+                                    ⚠️ GPS coordinates not set
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--slate-200); padding-top: 12px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                        <button type="button" class="btn btn-primary btn-sm btn-quick-map"
+                                style="font-size: 0.75rem; padding: 4px 10px;"
+                                data-loc-id="{{ loc.pk }}"
+                                data-loc-name="{{ loc.location_name }}"
+                                data-loc-address="{{ loc.address }}"
+                                data-loc-lat="{{ loc.latitude|default:'' }}"
+                                data-loc-lng="{{ loc.longitude|default:'' }}"
+                                data-loc-type="{{ loc.location_type }}">
+                            📍 Select Location on Map
+                        </button>
+                        <div style="display: flex; gap: 4px;">
+                            <a href="{% url 'location_edit' pk=loc.pk %}?next={{ request.path }}" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 4px 9px;">
+                                Edit
+                            </a>
+                            <form method="POST" action="{% url 'location_delete' pk=loc.pk %}?next={{ request.path }}" onsubmit="return confirm('Are you sure you want to delete \'{{ loc.location_name }}\'?');" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: #fecaca; font-size: 0.75rem; padding: 4px 8px;" title="Delete facility">
+                                    &times;
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 36px 20px; color: var(--slate-500); background: var(--paper); border: 1px dashed var(--slate-300); border-radius: 6px;">
+                <div style="font-size: 2.2rem; margin-bottom: 8px;">📍</div>
+                <p style="font-size: 0.9rem; margin-bottom: 12px;">No {% if company.can_sell and not company.can_buy %}warehouses{% else %}godowns{% endif %} registered yet.</p>
+                <a href="{% url 'location_create' %}?next={{ request.path }}" class="btn btn-primary btn-sm">
+                    + Register First {% if company.can_sell and not company.can_buy %}Warehouse{% else %}Godown{% endif %}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Quick update on map for existing godowns / warehouses
+            document.querySelectorAll('.btn-quick-map').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const locId = btn.dataset.locId;
+                    const locName = btn.dataset.locName;
+                    const initialAddress = btn.dataset.locAddress;
+                    const initialLat = btn.dataset.locLat;
+                    const initialLng = btn.dataset.locLng;
+                    const locType = btn.dataset.locType || 'godown';
+
+                    window.openLocationPicker({
+                        initialLat: initialLat || null,
+                        initialLng: initialLng || null,
+                        initialAddress: initialAddress || "",
+                        title: `Update Location for "${locName}"`,
+                        onConfirm: function (data) {
+                            // Send POST to update this existing godown without creating duplicate records
+                            const formData = new FormData();
+                            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                            formData.append('location_name', locName);
+                            formData.append('location_type', locType);
+                            formData.append('address', data.address);
+                            formData.append('latitude', data.latitude);
+                            formData.append('longitude', data.longitude);
+                            formData.append('is_ajax', '1');
+
+                            fetch(`/accounts/locations/${locId}/edit/`, {
+                                method: 'POST',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                },
+                                body: formData
+                            })
+                            .then(function (res) {
+                                if (res.ok) {
+                                    // Update displayed address and coords immediately on the page
+                                    const addrDisplay = document.getElementById(`loc-address-display-${locId}`);
+                                    const coordsContainer = document.getElementById(`loc-coords-container-${locId}`);
+                                    if (addrDisplay) addrDisplay.textContent = data.address;
+                                    if (coordsContainer) {
+                                        coordsContainer.innerHTML = `<span class="mono" style="background:#e0f2fe; color:#0369a1; padding:2px 7px; border-radius:3px; font-size:0.72rem; display:inline-flex; align-items:center; gap:4px;">📍 Lat: ${Number(data.latitude).toFixed(4)}, Lng: ${Number(data.longitude).toFixed(4)}</span>`;
+                                    }
+                                    btn.dataset.locAddress = data.address;
+                                    btn.dataset.locLat = data.latitude;
+                                    btn.dataset.locLng = data.longitude;
+                                    alert(`Location for "${locName}" updated successfully!`);
+                                } else {
+                                    // Fallback to normal form redirect if needed
+                                    window.location.reload();
+                                }
+                            })
+                            .catch(function () {
+                                window.location.reload();
+                            });
+                        }
+                    });
+                });
+            });
+        });
+        </script>
+
         <!-- 2. Buyer Procurement & Delivery Tracking History (Amazon/Flipkart Pro style) -->
         {% if orders %}
         <div class="panel">

@@ -2,7 +2,35 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 
-from .models import Company
+from .models import Company, CompanyLocation
+
+
+class CompanyLocationForm(forms.ModelForm):
+    class Meta:
+        model = CompanyLocation
+        fields = ['location_name', 'location_type', 'address', 'latitude', 'longitude', 'is_primary']
+        widgets = {
+            'location_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Aluva Main Godown or Surat Production Hub'}),
+            'location_type': forms.Select(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Full physical street or industrial park address'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control loc-lat-val', 'step': 'any', 'placeholder': 'e.g. 10.026100'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control loc-lng-val', 'step': 'any', 'placeholder': 'e.g. 76.312500'}),
+            'is_primary': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def clean_latitude(self):
+        lat = self.cleaned_data.get('latitude')
+        if lat is not None:
+            if lat < -90 or lat > 90:
+                raise forms.ValidationError('Latitude must be between -90 and 90 degrees.')
+        return lat
+
+    def clean_longitude(self):
+        lng = self.cleaned_data.get('longitude')
+        if lng is not None:
+            if lng < -180 or lng > 180:
+                raise forms.ValidationError('Longitude must be between -180 and 180 degrees.')
+        return lng
 
 
 class CompanySignupForm(forms.Form):
@@ -174,13 +202,22 @@ class ForgotPasswordForm(forms.Form):
     )
 
 
-class ResetPasswordOTPForm(forms.Form):
+class VerifyResetOTPForm(forms.Form):
     otp = forms.CharField(
         label="6-Digit OTP Code",
         max_length=6,
         min_length=6,
-        widget=forms.TextInput(attrs={'placeholder': '• • • • • •', 'autocomplete': 'one-time-code'})
+        widget=forms.TextInput(attrs={
+            'placeholder': '• • • • • •',
+            'autocomplete': 'one-time-code',
+            'class': 'mono',
+            'autofocus': 'autofocus',
+            'style': 'letter-spacing: 6px; text-align: center; font-size: 1.5rem;'
+        })
     )
+
+
+class SetNewPasswordForm(forms.Form):
     new_password = forms.CharField(
         label="New Password",
         widget=forms.PasswordInput(attrs={'placeholder': 'Enter at least 8 characters'}),
@@ -203,6 +240,10 @@ class ResetPasswordOTPForm(forms.Form):
         if pw and cpw and pw != cpw:
             self.add_error('confirm_password', 'Passwords do not match.')
         return cleaned_data
+
+
+# Backward-compatibility alias
+ResetPasswordOTPForm = SetNewPasswordForm
 
 
 class EnterpriseProfileForm(forms.ModelForm):

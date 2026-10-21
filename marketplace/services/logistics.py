@@ -1,8 +1,9 @@
 """
 Kerala Industrial Corridor Logistics & Transportation Engine.
 Manages district-to-district distance matrix, toll surcharges,
-and live tracking waypoint telemetry along NH 544 & NH 66 corridors.
+Haversine coordinate distance calculations, and live tracking waypoint telemetry along NH 544 & NH 66 corridors.
 """
+import math
 from decimal import Decimal
 
 
@@ -41,8 +42,49 @@ def extract_district(location_str: str) -> str:
     return "kochi"
 
 
-def calculate_corridor_distance(origin: str, destination: str) -> int:
-    """Calculate distance in kilometers between two Kerala industrial points."""
+def haversine_distance_km(lat1, lon1, lat2, lon2) -> int:
+    """
+    Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees), applying a road corridor winding factor (1.25x).
+    Returns integer kilometers (minimum 5 km).
+    """
+    if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+        return None
+    try:
+        lat1, lon1, lat2, lon2 = float(lat1), float(lon1), float(lat2), float(lon2)
+        # Convert decimal degrees to radians
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+
+        a = (math.sin(delta_phi / 2.0) ** 2 +
+             math.cos(phi1) * math.cos(phi2) * (math.sin(delta_lambda / 2.0) ** 2))
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        earth_radius_km = 6371.0
+        straight_dist = earth_radius_km * c
+        # Road corridor factor in Kerala / India terrain ~ 1.25
+        road_km = max(5, round(straight_dist * 1.25))
+        return int(road_km)
+    except (ValueError, TypeError):
+        return None
+
+
+def calculate_corridor_distance(origin: str, destination: str,
+                                orig_coords: tuple = None, dest_coords: tuple = None) -> int:
+    """
+    Calculate distance in kilometers between two Kerala industrial points.
+    If coordinates (lat, lon) are provided for both, uses precise Haversine formula with road corridor factor.
+    Otherwise falls back to Kerala district-to-district corridor distance matrix.
+    """
+    if orig_coords and dest_coords:
+        try:
+            h_dist = haversine_distance_km(orig_coords[0], orig_coords[1], dest_coords[0], dest_coords[1])
+            if h_dist is not None:
+                return h_dist
+        except Exception:
+            pass
+
     orig_d = extract_district(origin)
     dest_d = extract_district(destination)
 

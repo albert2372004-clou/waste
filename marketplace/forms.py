@@ -1,4 +1,5 @@
 from django import forms
+from accounts.models import CompanyLocation
 from .models import (
     MaterialListing,
     Certificate,
@@ -25,6 +26,7 @@ class MaterialListingForm(forms.ModelForm):
         fields = [
             'material_name',
             'category',
+            'warehouse',
             'description',
             'price_per_ton',
             'volume_tons',
@@ -48,6 +50,7 @@ class MaterialListingForm(forms.ModelForm):
         widgets = {
             'material_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Shredded Tyre Crumb Rubber (Grade A)'}),
             'category': forms.Select(attrs={'class': 'form-control', 'id': 'id_category'}),
+            'warehouse': forms.Select(attrs={'class': 'form-control', 'id': 'id_warehouse'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe byproduct origin, composition, storage condition, and recommended applications'}),
             'price_per_ton': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_price_per_ton', 'step': '0.01'}),
             'volume_tons': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_volume_tons', 'step': '0.1'}),
@@ -66,6 +69,21 @@ class MaterialListingForm(forms.ModelForm):
             'particle_size': forms.TextInput(attrs={'class': 'form-control'}),
             'compliance_id': forms.TextInput(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, company=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if company:
+            self.fields['warehouse'].queryset = company.locations.all()
+            if company.locations.count() == 1:
+                self.fields['warehouse'].initial = company.locations.first()
+            elif not self.instance.pk:
+                primary = company.locations.filter(is_primary=True).first()
+                if primary:
+                    self.fields['warehouse'].initial = primary
+        else:
+            self.fields['warehouse'].queryset = CompanyLocation.objects.none()
+        self.fields['warehouse'].required = False
+        self.fields['location'].required = False
 
     def clean_image(self):
         img = self.cleaned_data.get('image')

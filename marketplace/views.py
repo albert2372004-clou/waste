@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
@@ -178,6 +179,7 @@ def dashboard(request):
         'incoming_requests': incoming_requests,
         'certificates': certificates,
         'pools': pools,
+        'locations': company.locations.all(),
         'metric_volume': f"{total_listed_volume:.0f} t",
         'metric_requests': requests_count,
         'metric_reliability': "98%",
@@ -195,12 +197,33 @@ def listing_create(request):
         messages.error(request, "Only verified suppliers or dual-role enterprises can create material listings.")
         return redirect('index')
 
+    supplier_warehouses = company.locations.all()
+    if not supplier_warehouses.exists():
+        messages.error(
+            request,
+            "Suppliers must have at least one valid warehouse or facility location registered before publishing a waste listing. "
+            "Please register a warehouse location first."
+        )
+        return redirect('location_create')
+
     if request.method == 'POST':
-        form = MaterialListingForm(request.POST, request.FILES)
+        form = MaterialListingForm(request.POST, request.FILES, company=company)
         if form.is_valid():
             listing = form.save(commit=False)
             listing.supplier = company
             listing.approval_status = 'pending'
+
+            # Warehouse linkage: auto-select single warehouse or assign selected warehouse
+            warehouse_id = request.POST.get('warehouse')
+            selected_warehouse = None
+            if warehouse_id:
+                selected_warehouse = supplier_warehouses.filter(id=warehouse_id).first()
+            if not selected_warehouse:
+                selected_warehouse = supplier_warehouses.filter(is_primary=True).first() or supplier_warehouses.first()
+
+            listing.warehouse = selected_warehouse
+            if selected_warehouse:
+                listing.location = f"{selected_warehouse.location_name}, {selected_warehouse.address}"
             
             # Multi-angle image verification and smart filtering
             from .services.image_verifier import process_multi_image_verification
@@ -253,12 +276,15 @@ def listing_create(request):
             return redirect('dashboard')
     else:
         # Prepopulate with standard recommended values for Kerala industrial zone
-        form = MaterialListingForm(initial={
+        initial_warehouse = supplier_warehouses.filter(is_primary=True).first() or supplier_warehouses.first()
+        initial_loc = f"{initial_warehouse.location_name}, {initial_warehouse.address}" if initial_warehouse else (company.address or 'Kochi Industrial Corridor, Kerala')
+        form = MaterialListingForm(company=company, initial={
             'category': 'rubber',
+            'warehouse': initial_warehouse,
             'volume_tons': 100.0,
             'purity_percent': 90,
             'price_per_ton': 18000.00,
-            'location': company.address or 'Kochi Industrial Corridor, Kerala',
+            'location': initial_loc,
         })
 
     # Recommended price preview for initial form
@@ -267,6 +293,7 @@ def listing_create(request):
 
     return render(request, 'listing_form.html', {
         'form': form,
+        'warehouses': supplier_warehouses,
         'is_edit': False,
         'standard_rate': std_rate,
         'recommended_price': rec_preview,
@@ -279,11 +306,18 @@ def listing_edit(request, pk):
     """Supplier edits an existing listing."""
     company = getattr(request.user, 'company', None)
     listing = get_object_or_404(MaterialListing, pk=pk, supplier=company)
+    supplier_warehouses = company.locations.all()
 
     if request.method == 'POST':
-        form = MaterialListingForm(request.POST, request.FILES, instance=listing)
+        form = MaterialListingForm(request.POST, request.FILES, instance=listing, company=company)
         if form.is_valid():
             updated_listing = form.save(commit=False)
+            warehouse_id = request.POST.get('warehouse')
+            if warehouse_id:
+                sel_wh = supplier_warehouses.filter(id=warehouse_id).first()
+                if sel_wh:
+                    updated_listing.warehouse = sel_wh
+                    updated_listing.location = f"{sel_wh.location_name}, {sel_wh.address}"
             # Recompute recommended price
             rec_rate = calculate_recommended_rate(
                 updated_listing.category,
@@ -320,11 +354,12 @@ def listing_edit(request, pk):
             messages.success(request, f"Listing '{updated_listing.material_name}' updated successfully.")
             return redirect('dashboard')
     else:
-        form = MaterialListingForm(instance=listing)
+        form = MaterialListingForm(instance=listing, company=company)
 
     rec_preview = calculate_recommended_rate(listing.category, listing.purity_percent, float(listing.volume_tons))
     return render(request, 'listing_form.html', {
         'form': form,
+        'warehouses': supplier_warehouses,
         'is_edit': True,
         'listing': listing,
         'standard_rate': get_standard_rate(listing.category),
@@ -510,6 +545,21 @@ def cart_view(request):
     batch_summary = batch_service.get_summary()
     standard_summary = standard_service.get_summary()
 
+    buyer_company = getattr(request.user, 'company', None) if request.user.is_authenticated else None
+    buyer_godowns = list(buyer_company.locations.all()) if buyer_company else []
+
+    # If buyer has registered godowns, ensure cart destination defaults to their registered godown
+    if buyer_godowns:
+        registered_addrs = [bg.address for bg in buyer_godowns]
+        primary_bg = next((bg for bg in buyer_godowns if bg.is_primary), buyer_godowns[0])
+        if standard_service.cart.get('destination_facility') not in registered_addrs:
+            standard_service.set_destination(primary_bg.address)
+            standard_summary = standard_service.get_summary(primary_bg.address)
+        if batch_service.cart.get('target_destination') not in registered_addrs:
+            batch_service.cart['target_destination'] = primary_bg.address
+            batch_service.save()
+            batch_summary = batch_service.get_summary()
+
     # Query Available Candidate Sources for the Multi-Factor Aggregation Category
     cat_code = batch_summary.get('target_category', 'rubber')
     target_dest = batch_summary.get('target_destination', 'KINFRA Integrated Industrial Park, Palakkad, Kerala')
@@ -533,14 +583,6 @@ def cart_view(request):
 
     available_sources.sort(key=lambda x: x.multi_factor_score, reverse=True)
 
-    kerala_destinations = [
-        "KINFRA Integrated Industrial Park, Palakkad, Kerala",
-        "Kochi Petrochemical Complex & Port Cluster, Kerala",
-        "Kottayam Rubber & Polymer Processing Cluster, Kerala",
-        "Alappuzha Coir & Marine Industrial Park, Kerala",
-        "Kannur Industrial Growth Centre, Kerala",
-    ]
-
     active_tab = request.GET.get('tab')
     if not active_tab:
         if standard_summary['items_count'] > 0 and batch_summary['items_count'] == 0:
@@ -555,7 +597,7 @@ def cart_view(request):
         'batch_summary': batch_summary,
         'standard_summary': standard_summary,
         'available_sources': available_sources,
-        'kerala_destinations': kerala_destinations,
+        'buyer_godowns': buyer_godowns,
     }
     return render(request, 'checkout.html', context)
 
@@ -678,17 +720,41 @@ def cart_checkout(request):
         return redirect('index')
 
     buyer_company = getattr(request.user, 'company', None)
+    if not buyer_company or not buyer_company.locations.exists():
+        messages.warning(
+            request,
+            "You must have at least one registered destination godown before placing an order. "
+            "Please register a delivery godown first."
+        )
+        return redirect(f"{reverse('location_create')}?next={reverse('cart_view')}?tab=batch")
+
+    target_dest = summary.get('target_destination')
+    delivery_godown = None
+    if target_dest:
+        delivery_godown = buyer_company.locations.filter(address=target_dest).first()
+    if not delivery_godown:
+        delivery_godown = buyer_company.locations.filter(is_primary=True).first() or buyer_company.locations.first()
+
+    dest_facility = delivery_godown.address
+    dest_lat = delivery_godown.latitude
+    dest_lng = delivery_godown.longitude
     created_count = 0
-    dest_facility = summary.get('target_destination') or (buyer_company.address if (buyer_company and buyer_company.address) else "Palakkad Industrial Corridor, Kerala")
     
     for item in summary['items']:
         listing = get_object_or_404(MaterialListing, pk=item['listing_id'])
-        dist_km = calculate_corridor_distance(listing.location, dest_facility)
+        orig_coords = (listing.warehouse.latitude, listing.warehouse.longitude) if (listing.warehouse and listing.warehouse.latitude and listing.warehouse.longitude) else None
+        dest_coords = (dest_lat, dest_lng) if (dest_lat and dest_lng) else None
+        dist_km = calculate_corridor_distance(listing.location, dest_facility, orig_coords=orig_coords, dest_coords=dest_coords)
         ProcurementRequest.objects.create(
             buyer=request.user,
             buyer_company=buyer_company,
             listing=listing,
             volume_requested=Decimal(str(item['volume_tons'])),
+            delivery_location=delivery_godown,
+            delivery_latitude=dest_lat,
+            delivery_longitude=dest_lng,
+            origin_latitude=orig_coords[0] if orig_coords else None,
+            origin_longitude=orig_coords[1] if orig_coords else None,
             status='pending',
             payment_status='escrow_held',
             delivery_status='order_confirmed',
@@ -761,24 +827,53 @@ def standard_cart_remove(request, pk):
 def standard_cart_checkout(request):
     """Converts standard shopping cart into procurement orders for each supplier."""
     cart = StandardCartService(request.session)
-    dest = request.POST.get('destination_facility') or "Palakkad Industrial Corridor, Kerala"
+    buyer_company = getattr(request.user, 'company', None)
+    if not buyer_company or not buyer_company.locations.exists():
+        messages.warning(
+            request,
+            "You must have at least one registered destination godown before placing an order. "
+            "Please register a delivery godown first."
+        )
+        return redirect(f"{reverse('location_create')}?next={reverse('cart_view')}?tab=standard")
+
+    godown_id = request.POST.get('delivery_godown_id')
+    dest_param = request.POST.get('destination_facility')
+
+    delivery_godown = None
+    if godown_id:
+        delivery_godown = buyer_company.locations.filter(id=godown_id).first()
+    if not delivery_godown and dest_param:
+        delivery_godown = buyer_company.locations.filter(address=dest_param).first()
+    if not delivery_godown:
+        delivery_godown = buyer_company.locations.filter(is_primary=True).first() or buyer_company.locations.first()
+
+    dest = delivery_godown.address
+    dest_lat = delivery_godown.latitude
+    dest_lng = delivery_godown.longitude
     summary = cart.get_summary(dest)
 
     if not summary['items']:
         messages.error(request, "Your Shopping Cart is empty.")
         return redirect('index')
 
-    buyer_company = getattr(request.user, 'company', None)
     created_count = 0
 
     for item in summary['items']:
         listing = get_object_or_404(MaterialListing, pk=item['listing_id'])
-        dist_km = calculate_corridor_distance(listing.location, dest)
+        orig_coords = (listing.warehouse.latitude, listing.warehouse.longitude) if (listing.warehouse and listing.warehouse.latitude and listing.warehouse.longitude) else None
+        dest_coords = (dest_lat, dest_lng) if (dest_lat and dest_lng) else None
+        dist_km = calculate_corridor_distance(listing.location, dest, orig_coords=orig_coords, dest_coords=dest_coords)
+
         ProcurementRequest.objects.create(
             buyer=request.user,
             buyer_company=buyer_company,
             listing=listing,
             volume_requested=Decimal(str(item['volume_tons'])),
+            delivery_location=delivery_godown,
+            delivery_latitude=dest_lat,
+            delivery_longitude=dest_lng,
+            origin_latitude=orig_coords[0] if orig_coords else None,
+            origin_longitude=orig_coords[1] if orig_coords else None,
             status='pending',
             payment_status='escrow_held',
             delivery_status='order_confirmed',
@@ -805,18 +900,46 @@ def standard_cart_checkout(request):
 def checkout(request, pk):
     """Direct single-listing procurement checkout."""
     listing = get_object_or_404(MaterialListing, pk=pk)
+    buyer_company = getattr(request.user, 'company', None)
+    if not buyer_company or not buyer_company.locations.exists():
+        messages.warning(
+            request,
+            "You must have at least one registered destination godown before placing an order. "
+            "Please register a delivery godown first."
+        )
+        return redirect(f"{reverse('location_create')}?next={request.path}")
 
     if request.method == "POST":
         volume = request.POST.get("volume_requested", listing.moq_tons)
-        buyer_company = getattr(request.user, 'company', None)
-        dest_facility = buyer_company.address if (buyer_company and buyer_company.address) else "Kochi Logistics Park, Kerala"
-        dist_km = calculate_corridor_distance(listing.location, dest_facility)
-        
+        godown_id = request.POST.get('delivery_godown_id')
+        dest_param = request.POST.get('destination_facility')
+
+        delivery_godown = None
+        if godown_id:
+            delivery_godown = buyer_company.locations.filter(id=godown_id).first()
+        if not delivery_godown and dest_param:
+            delivery_godown = buyer_company.locations.filter(address=dest_param).first()
+        if not delivery_godown:
+            delivery_godown = buyer_company.locations.filter(is_primary=True).first() or buyer_company.locations.first()
+
+        dest_facility = delivery_godown.address
+        dest_lat = delivery_godown.latitude
+        dest_lng = delivery_godown.longitude
+
+        orig_coords = (listing.warehouse.latitude, listing.warehouse.longitude) if (listing.warehouse and listing.warehouse.latitude and listing.warehouse.longitude) else None
+        dest_coords = (dest_lat, dest_lng) if (dest_lat and dest_lng) else None
+        dist_km = calculate_corridor_distance(listing.location, dest_facility, orig_coords=orig_coords, dest_coords=dest_coords)
+
         ProcurementRequest.objects.create(
             buyer=request.user,
             buyer_company=buyer_company,
             listing=listing,
             volume_requested=Decimal(str(volume)),
+            delivery_location=delivery_godown,
+            delivery_latitude=dest_lat,
+            delivery_longitude=dest_lng,
+            origin_latitude=orig_coords[0] if orig_coords else None,
+            origin_longitude=orig_coords[1] if orig_coords else None,
             status="pending",
             payment_status="escrow_held",
             delivery_status="order_confirmed",
@@ -837,6 +960,7 @@ def checkout(request, pk):
     return render(request, "checkout.html", {
         "listing": listing,
         "single_mode": True,
+        "buyer_godowns": list(buyer_company.locations.all()),
     })
 
 

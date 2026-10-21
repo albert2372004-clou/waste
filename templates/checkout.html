@@ -20,6 +20,26 @@
 
 <div class="wrap" style="padding-top: 10px; padding-bottom: 60px;">
 
+    {% if not buyer_godowns %}
+    <!-- Global Warning Banner: Destination Godown Required -->
+    <div style="background: #fffbeb; border: 1px solid #fde047; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.4rem; line-height: 1;">⚠️</span>
+                <div>
+                    <strong style="color: #92400e; font-size: 0.92rem; display: block;">Destination Godown Required</strong>
+                    <span style="font-size: 0.8rem; color: #78350f;">
+                        You do not have any registered destination godowns. A destination godown is required before placing an order.
+                    </span>
+                </div>
+            </div>
+            <a href="{% url 'location_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-primary btn-sm" style="font-size: 0.82rem; padding: 6px 14px; white-space: nowrap;">
+                + Register Delivery Godown Now &rarr;
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Top Cart Mode Switcher Tabs (Flipkart Normal Cart vs Multi-Factor Batch Aggregator) -->
     <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--slate-200); padding-bottom: 12px; flex-wrap: wrap;">
         <a href="?tab=standard" class="btn {% if active_tab == 'standard' %}btn-primary{% else %}btn-outline{% endif %}" style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; padding: 10px 18px;">
@@ -132,22 +152,47 @@
 
             <!-- Destination Facility Selector -->
             <div class="panel">
-                <h3 style="font-size: 0.95rem; margin-bottom: 8px;">📍 Destination Receiving Facility</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h3 style="font-size: 0.95rem; margin: 0;">📍 Destination Receiving Godown</h3>
+                    {% if buyer_godowns %}
+                    <a href="{% url 'location_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-outline btn-sm" style="font-size: 0.74rem; padding: 2px 8px;">
+                        + Add Another Godown
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if not buyer_godowns %}
+                <div style="background: #fffbeb; border: 1px solid #fde047; border-radius: 6px; padding: 14px; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <span style="font-size: 1.3rem; line-height: 1;">⚠️</span>
+                        <div>
+                            <strong style="color: #92400e; font-size: 0.88rem; display: block;">Destination Godown Required</strong>
+                            <p style="font-size: 0.78rem; color: #78350f; margin: 4px 0 10px; line-height: 1.45;">
+                                You do not have any registered destination godowns. You must have at least one registered destination godown before placing orders.
+                            </p>
+                            <a href="{% url 'location_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-primary btn-sm" style="font-size: 0.82rem; padding: 6px 14px;">
+                                + Register Delivery Godown Now &rarr;
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
                 <p style="font-size: 0.78rem; color: var(--slate-500); margin-bottom: 12px;">
-                    Select your plant delivery hub to calculate freight and corridor highway toll:
+                    Select your registered destination godown for shipment receipt:
                 </p>
-                <form method="POST" action="{% url 'cart_view' %}" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <form method="POST" action="{% url 'cart_view' %}" id="dest-select-form" style="display: flex; gap: 8px; flex-wrap: wrap;">
                     {% csrf_token %}
                     <input type="hidden" name="update_standard_dest" value="1">
-                    <select name="destination_facility" class="form-control" style="flex: 1; min-width: 260px; font-size: 0.85rem;">
-                        {% for dest in kerala_destinations %}
-                            <option value="{{ dest }}" {% if dest == standard_summary.destination_facility %}selected{% endif %}>
-                                {{ dest }}
+                    <select name="destination_facility" id="dest-facility-select" class="form-control" style="flex: 1; min-width: 260px; font-size: 0.85rem;">
+                        {% for bg in buyer_godowns %}
+                            <option value="{{ bg.address }}" data-id="{{ bg.id }}" data-lat="{{ bg.latitude|default:'' }}" data-lng="{{ bg.longitude|default:'' }}" {% if bg.address == standard_summary.destination_facility or forloop.first and not standard_summary.destination_facility %}selected{% endif %}>
+                                🏢 {{ bg.location_name }} — {{ bg.address|truncatechars:42 }}{% if bg.is_primary %} [Primary Godown]{% endif %}
                             </option>
                         {% endfor %}
                     </select>
                     <button type="submit" class="btn btn-outline btn-sm">Set Destination</button>
                 </form>
+                {% endif %}
             </div>
         </div>
 
@@ -187,13 +232,24 @@
             </div>
 
             {% if standard_summary.items %}
-            <form method="POST" action="{% url 'standard_cart_checkout' %}">
-                {% csrf_token %}
-                <input type="hidden" name="destination_facility" value="{{ standard_summary.destination_facility }}">
-                <button type="submit" class="btn btn-primary btn-block" style="padding: 12px; font-size: 0.92rem;">
-                    Place Order &amp; Reserve Escrow &rarr;
-                </button>
-            </form>
+                {% if buyer_godowns %}
+                <form method="POST" action="{% url 'standard_cart_checkout' %}" id="checkout-order-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="destination_facility" id="order-dest-facility" value="{{ standard_summary.destination_facility }}">
+                    <input type="hidden" name="delivery_godown_id" id="order-godown-id" value="">
+                    <input type="hidden" name="delivery_latitude" id="order-dest-lat" value="">
+                    <input type="hidden" name="delivery_longitude" id="order-dest-lng" value="">
+                    <input type="hidden" name="save_to_godowns" id="order-save-godowns" value="0">
+                    <input type="hidden" name="new_godown_name" id="order-godown-name" value="">
+                    <button type="submit" class="btn btn-primary btn-block" style="padding: 12px; font-size: 0.92rem;">
+                        Place Order &amp; Reserve Escrow &rarr;
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'location_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-warning btn-block" style="padding: 12px; font-size: 0.88rem; text-align: center; font-weight: 600; text-decoration: none;">
+                    ⚠️ Register Delivery Godown to Place Order &rarr;
+                </a>
+                {% endif %}
             {% else %}
             <button disabled class="btn btn-outline btn-block" style="padding: 12px; opacity: 0.5;">
                 Cart is Empty
@@ -249,15 +305,24 @@
 
                         <div>
                             <label style="display:block; font-size:0.75rem; font-weight:600; margin-bottom:4px; color:var(--slate-700);">
-                                📍 Target Destination Facility:
+                                📍 Destination Receiving Godown:
                             </label>
-                            <select name="target_destination" class="form-control" style="font-size:0.85rem;">
-                                {% for dest in kerala_destinations %}
-                                    <option value="{{ dest }}" {% if dest == summary.target_destination %}selected{% endif %}>
-                                        {{ dest }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+                            {% if buyer_godowns %}
+                                <select name="target_destination" class="form-control" style="font-size:0.85rem;">
+                                    {% for bg in buyer_godowns %}
+                                        <option value="{{ bg.address }}" {% if bg.address == summary.target_destination or forloop.first and not summary.target_destination %}selected{% endif %}>
+                                            🏢 {{ bg.location_name }} — {{ bg.address|truncatechars:38 }}{% if bg.is_primary %} [Primary]{% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <div style="display: flex; gap: 6px; align-items: center; padding-top: 4px;">
+                                    <span style="font-size: 0.78rem; color: #b45309; font-weight: 600;">⚠️ No godowns</span>
+                                    <a href="{% url 'location_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 2px 8px;">
+                                        + Register Godown
+                                    </a>
+                                </div>
+                            {% endif %}
                         </div>
 
                         <div>
@@ -519,9 +584,15 @@
             </div>
 
             {% if summary.items %}
+                {% if buyer_godowns %}
                 <a href="{% url 'cart_checkout' %}" class="btn btn-primary btn-block" style="padding: 12px; font-size: 0.92rem;">
                     Execute Multi-Supplier Requisition &rarr;
                 </a>
+                {% else %}
+                <a href="{% url 'location_create' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-warning btn-block" style="padding: 12px; font-size: 0.88rem; text-align: center; font-weight: 600; text-decoration: none;">
+                    ⚠️ Register Delivery Godown to Execute Requisition &rarr;
+                </a>
+                {% endif %}
             {% else %}
                 <button disabled class="btn btn-outline btn-block" style="padding: 12px; opacity: 0.5;">
                     Batch Cart Empty
@@ -552,4 +623,91 @@
         border-color: var(--emerald);
     }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const pickMapBtn = document.getElementById("btn-pick-checkout-map");
+    const destSelect = document.getElementById("dest-facility-select");
+    const customDestBox = document.getElementById("checkout-map-custom-dest");
+    const customDestText = document.getElementById("custom-dest-text");
+    const customCoordsText = document.getElementById("custom-coords-text");
+    const chkSaveGodown = document.getElementById("chk-save-godown");
+    const inputNewGodownName = document.getElementById("input-new-godown-name");
+
+    const orderDestFacility = document.getElementById("order-dest-facility");
+    const orderGodownId = document.getElementById("order-godown-id");
+    const orderDestLat = document.getElementById("order-dest-lat");
+    const orderDestLng = document.getElementById("order-dest-lng");
+    const orderSaveGodowns = document.getElementById("order-save-godowns");
+    const orderGodownName = document.getElementById("order-godown-name");
+
+    function syncSelectedGodown() {
+        if (!destSelect) return;
+        const opt = destSelect.options[destSelect.selectedIndex];
+        if (opt && opt.dataset.id) {
+            if (orderGodownId) orderGodownId.value = opt.dataset.id;
+            if (orderDestLat) orderDestLat.value = opt.dataset.lat || '';
+            if (orderDestLng) orderDestLng.value = opt.dataset.lng || '';
+        } else {
+            if (orderGodownId) orderGodownId.value = '';
+        }
+        if (orderDestFacility && opt) {
+            orderDestFacility.value = opt.value;
+        }
+    }
+
+    if (destSelect) {
+        destSelect.addEventListener("change", syncSelectedGodown);
+        syncSelectedGodown();
+    }
+
+    if (pickMapBtn) {
+        pickMapBtn.addEventListener("click", function () {
+            window.openLocationPicker({
+                initialLat: orderDestLat ? orderDestLat.value : null,
+                initialLng: orderDestLng ? orderDestLng.value : null,
+                initialAddress: destSelect ? destSelect.value : null,
+                title: "Select Delivery Godown / Facility on OpenStreetMap",
+                onConfirm: function (data) {
+                    if (customDestBox) customDestBox.style.display = 'block';
+                    if (customDestText) customDestText.textContent = data.address;
+                    if (customCoordsText) customCoordsText.textContent = `📍 Coordinates: ${Number(data.latitude).toFixed(4)}, ${Number(data.longitude).toFixed(4)}`;
+
+                    if (orderDestFacility) orderDestFacility.value = data.address;
+                    if (orderDestLat) orderDestLat.value = data.latitude;
+                    if (orderDestLng) orderDestLng.value = data.longitude;
+                    if (orderGodownId) orderGodownId.value = '';
+
+                    // Add an option to the select dropdown and select it
+                    if (destSelect) {
+                        const opt = new Option(`📍 Map Destination: ${data.address.substring(0, 40)}...`, data.address, true, true);
+                        opt.dataset.lat = data.latitude;
+                        opt.dataset.lng = data.longitude;
+                        destSelect.add(opt);
+                    }
+                }
+            });
+        });
+    }
+
+    if (chkSaveGodown) {
+        chkSaveGodown.addEventListener("change", function () {
+            if (inputNewGodownName) {
+                inputNewGodownName.style.display = this.checked ? 'block' : 'none';
+                if (this.checked && !inputNewGodownName.value && orderDestFacility) {
+                    const firstPart = orderDestFacility.value.split(',')[0].trim();
+                    inputNewGodownName.value = firstPart + " Godown";
+                }
+            }
+            if (orderSaveGodowns) orderSaveGodowns.value = this.checked ? '1' : '0';
+        });
+    }
+
+    if (inputNewGodownName) {
+        inputNewGodownName.addEventListener("input", function () {
+            if (orderGodownName) orderGodownName.value = this.value;
+        });
+    }
+});
+</script>
 {% endblock %}

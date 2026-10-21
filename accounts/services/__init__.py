@@ -1,1 +1,1 @@
-# Package init for accounts.services
+# Accounts Services

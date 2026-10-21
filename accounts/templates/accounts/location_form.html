@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Edit Facility{% else %}Add New Facility / Godown{% endif %} — Circular Waste Platform{% endblock %}
+
+{% block content %}
+<!-- Leaflet CSS & JS for Visible Interactive Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<div class="page-title-bar">
+    <div class="wrap">
+        <div>
+            <h1 style="font-size: var(--step-2);">{% if is_edit %}Edit Location: {{ location.location_name }}{% else %}Register New {% if is_supplier %}Warehouse / Hub{% else %}Godown / Delivery Facility{% endif %}{% endif %}</h1>
+            <div class="breadcrumb">
+                <a href="{% if is_supplier %}{% url 'dashboard' %}{% else %}{% url 'profile' %}{% endif %}">{% if is_supplier %}Supplier Dashboard{% else %}Enterprise Profile{% endif %}</a> / 
+                Facility Location
+            </div>
+        </div>
+        <div>
+            <a href="{{ next_url }}" class="btn btn-outline btn-sm">&larr; Back</a>
+        </div>
+    </div>
+</div>
+
+<div class="wrap" style="padding-top: 10px; padding-bottom: 60px;">
+    <div class="panel" style="max-width: 720px; margin: 0 auto;">
+        <h3 style="font-size: 1.1rem; margin-bottom: 6px;">Facility Location &amp; OpenStreetMap Coordinates</h3>
+        <p style="font-size: 0.82rem; color: var(--slate-500); margin-bottom: 20px;">
+            Accurate facility coordinates power our automated Kerala transport corridor distance matrix, toll calculations, and multi-factor logistics scoring.
+        </p>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger" style="margin-bottom: 16px;">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Facility / Godown Name *</label>
+                {{ form.location_name }}
+                {% if form.location_name.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.location_name.errors }}</div>{% endif %}
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Facility Type *</label>
+                    {{ form.location_type }}
+                    {% if form.location_type.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.location_type.errors }}</div>{% endif %}
+                </div>
+                <div style="display: flex; align-items: center; padding-top: 24px;">
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:0.85rem; cursor:pointer;">
+                        {{ form.is_primary }}
+                        <span>Designate as Primary Operating Facility</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-weight:600; font-size:0.82rem; margin:0;">Detailed Physical Address *</label>
+                    <button type="button" id="btn-pick-map" class="btn btn-outline btn-sm" style="font-size:0.75rem; padding:3px 9px;">
+                        🔍 Fullscreen Map Picker
+                    </button>
+                </div>
+                {{ form.address }}
+                {% if form.address.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.address.errors }}</div>{% endif %}
+            </div>
+
+            <!-- Visible Interactive OpenStreetMap Component -->
+            <div style="margin-bottom: 20px; border: 1px solid var(--slate-200); border-radius: 6px; padding: 14px; background: #fafafa;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <label style="font-weight: 700; font-size: 0.86rem; color: var(--slate-900); display: block; margin: 0;">
+                            🗺️ Interactive OpenStreetMap Location Picker
+                        </label>
+                        <span style="font-size: 0.74rem; color: var(--slate-500);">
+                            Click on the map or drag the pin to set precise facility GPS coordinates
+                        </span>
+                    </div>
+                    <span id="godown-map-coords-badge" class="mono" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 3px 8px; border-radius: 4px; font-size: 0.74rem; font-weight: 600; color: var(--slate-700);">
+                        No pin placed yet
+                    </span>
+                </div>
+
+                <!-- Quick Place Search -->
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" id="godown-map-search-input" class="form-control" style="font-size: 0.85rem;" placeholder="Search town, district, or industrial corridor (e.g. Aluva, Palakkad, Eloor, Kalamassery)...">
+                    <button type="button" id="godown-map-search-btn" class="btn btn-primary btn-sm" style="white-space: nowrap; font-size: 0.82rem; padding: 6px 14px;">
+                        🔍 Find Location
+                    </button>
+                </div>
+
+                <!-- Visible Map Container with Explicit Height and Width -->
+                <div id="godown-map-canvas" style="width: 100%; height: 380px; min-height: 380px; border-radius: 6px; border: 1px solid var(--slate-300); background: #e2e8f0; position: relative; z-index: 10; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.72rem; color: var(--slate-500);">
+                    <span>📍 Click map or drag marker to set exact location. Tiles served via OpenStreetMap.</span>
+                    <button type="button" id="btn-reset-map-view" style="color: var(--emerald-dark); font-weight: 600; cursor: pointer; text-decoration: underline;">
+                        Center on Kerala
+                    </button>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Latitude Coordinate</label>
+                    {{ form.latitude }}
+                    {% if form.latitude.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.latitude.errors }}</div>{% endif %}
+                </div>
+                <div>
+                    <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Longitude Coordinate</label>
+                    {{ form.longitude }}
+                    {% if form.longitude.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.longitude.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--slate-200); padding-top: 18px;">
+                <a href="{{ next_url }}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if is_edit %}Save Location Changes{% else %}Register Facility{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const latInput = document.getElementById("id_latitude");
+    const lngInput = document.getElementById("id_longitude");
+    const addressInput = document.getElementById("id_address");
+    const nameInput = document.getElementById("id_location_name");
+    const coordsBadge = document.getElementById("godown-map-coords-badge");
+    const searchInput = document.getElementById("godown-map-search-input");
+    const searchBtn = document.getElementById("godown-map-search-btn");
+    const resetBtn = document.getElementById("btn-reset-map-view");
+    const pickBtn = document.getElementById("btn-pick-map");
+
+    if (typeof L === 'undefined') {
+        console.error("Leaflet library not loaded.");
+        return;
+    }
+
+    const defaultLat = 10.0261; // Central Kerala (Kochi Industrial Hub)
+    const defaultLng = 76.3125;
+    const defaultZoom = 10;
+
+    let savedLat = latInput && latInput.value ? parseFloat(latInput.value) : null;
+    let savedLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : null;
+    const hasSavedCoords = (!isNaN(savedLat) && !isNaN(savedLng) && savedLat !== null && savedLng !== null && savedLat !== 0 && savedLng !== 0);
+
+    const initialLat = hasSavedCoords ? savedLat : defaultLat;
+    const initialLng = hasSavedCoords ? savedLng : defaultLng;
+    const initialZoom = hasSavedCoords ? 14 : defaultZoom;
+
+    // Initialize Map with zoom controls
+    const map = L.map('godown-map-canvas', {
+        center: [initialLat, initialLng],
+        zoom: initialZoom,
+        zoomControl: true,
+        scrollWheelZoom: true
+    });
+
+    // Standard OpenStreetMap Tile Layer
+    const osmTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Failover if any tile load error occurs
+    let failedOver = false;
+    osmTileLayer.on('tileerror', function() {
+        if (!failedOver) {
+            failedOver = true;
+            map.removeLayer(osmTileLayer);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                subdomains: 'abcd',
+                maxZoom: 20,
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+            }).addTo(map);
+        }
+    });
+
+    // Ensure map tiles render without grey backgrounds
+    function refreshMapSize() {
+        if (map) map.invalidateSize();
+    }
+    refreshMapSize();
+    setTimeout(refreshMapSize, 100);
+    setTimeout(refreshMapSize, 300);
+
+    let marker = null;
+
+    function setMarkerPosition(lat, lng, fetchAddress) {
+        const fixedLat = parseFloat(Number(lat).toFixed(6));
+        const fixedLng = parseFloat(Number(lng).toFixed(6));
+
+        if (latInput) latInput.value = fixedLat.toFixed(6);
+        if (lngInput) lngInput.value = fixedLng.toFixed(6);
+        if (coordsBadge) coordsBadge.textContent = `📍 ${fixedLat.toFixed(6)}, ${fixedLng.toFixed(6)}`;
+
+        if (!marker) {
+            marker = L.marker([fixedLat, fixedLng], {
+                draggable: true,
+                autoPan: true
+            }).addTo(map);
+
+            marker.on('dragend', function() {
+                const pos = marker.getLatLng();
+                setMarkerPosition(pos.lat, pos.lng, true);
+            });
+        } else {
+            marker.setLatLng([fixedLat, fixedLng]);
+        }
+
+        if (fetchAddress) {
+            // Reverse geocode via Nominatim with Photon fallback
+            const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${fixedLat}&lon=${fixedLng}&zoom=18&addressdetails=1`;
+            fetch(nomUrl, { headers: { 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.display_name && addressInput && !addressInput.value.trim()) {
+                        addressInput.value = data.display_name;
+                        if (nameInput && !nameInput.value.trim()) {
+                            const firstPart = data.display_name.split(',')[0].trim();
+                            nameInput.value = `${firstPart} Facility`;
+                        }
+                    }
+                })
+                .catch(() => {
+                    fetch(`https://photon.komoot.io/reverse?lat=${fixedLat}&lon=${fixedLng}`)
+                        .then(r => r.json())
+                        .then(pdata => {
+                            if (pdata && pdata.features && pdata.features.length > 0 && addressInput && !addressInput.value.trim()) {
+                                const p = pdata.features[0].properties;
+                                const parts = [p.name, p.street, p.city || p.district, p.state, p.country].filter(Boolean);
+                                addressInput.value = parts.join(", ");
+                            }
+                        })
+                        .catch(() => {});
+                });
+        }
+    }
+
+    if (hasSavedCoords) {
+        setMarkerPosition(savedLat, savedLng, false);
+    }
+
+    // Click anywhere on map to position pin
+    map.on('click', function(e) {
+        setMarkerPosition(e.latlng.lat, e.latlng.lng, true);
+    });
+
+    // Place search handler
+    function executeSearch() {
+        const query = searchInput ? searchInput.value.trim() : "";
+        if (!query) return;
+
+        searchBtn.disabled = true;
+        searchBtn.textContent = "Searching...";
+
+        const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Kerala, India')}&limit=1`;
+        fetch(searchUrl)
+            .then(r => r.json())
+            .then(results => {
+                searchBtn.disabled = false;
+                searchBtn.textContent = "🔍 Find Location";
+                if (results && results.length > 0) {
+                    const lat = parseFloat(results[0].lat);
+                    const lon = parseFloat(results[0].lon);
+                    map.setView([lat, lon], 14);
+                    setMarkerPosition(lat, lon, false);
+                    if (addressInput && !addressInput.value.trim()) {
+                        addressInput.value = results[0].display_name;
+                    }
+                } else {
+                    // Fallback to Photon
+                    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query + ' Kerala')}&limit=1`)
+                        .then(r => r.json())
+                        .then(pdata => {
+                            if (pdata && pdata.features && pdata.features.length > 0) {
+                                const coords = pdata.features[0].geometry.coordinates;
+                                map.setView([coords[1], coords[0]], 14);
+                                setMarkerPosition(coords[1], coords[0], false);
+                            } else {
+                                alert(`Could not locate "${query}". Please click directly on the map to place your pin.`);
+                            }
+                        })
+                        .catch(() => {
+                            alert(`Could not locate "${query}". Please click directly on the map.`);
+                        });
+                }
+            })
+            .catch(() => {
+                searchBtn.disabled = false;
+                searchBtn.textContent = "🔍 Find Location";
+                alert("Search service currently busy. You can click directly on the map to select your location.");
+            });
+    }
+
+    if (searchBtn) searchBtn.addEventListener('click', executeSearch);
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeSearch();
+            }
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            map.setView([defaultLat, defaultLng], defaultZoom);
+        });
+    }
+
+    // Direct manual coordinate typing synchronization
+    function onManualCoordsChange() {
+        const lat = parseFloat(latInput ? latInput.value : '');
+        const lng = parseFloat(lngInput ? lngInput.value : '');
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            map.setView([lat, lng], 14);
+            setMarkerPosition(lat, lng, false);
+        }
+    }
+    if (latInput) latInput.addEventListener('change', onManualCoordsChange);
+    if (lngInput) lngInput.addEventListener('change', onManualCoordsChange);
+
+    // Synchronize with modal picker if opened
+    if (pickBtn) {
+        pickBtn.addEventListener("click", function() {
+            window.openLocationPicker({
+                initialLat: latInput ? latInput.value : null,
+                initialLng: lngInput ? lngInput.value : null,
+                initialAddress: addressInput ? addressInput.value : null,
+                title: "Select Facility Location on OpenStreetMap",
+                onConfirm: function(data) {
+                    if (latInput) latInput.value = data.latitude;
+                    if (lngInput) lngInput.value = data.longitude;
+                    if (addressInput) addressInput.value = data.address;
+                    if (nameInput && !nameInput.value.trim()) {
+                        const cityPart = data.address.split(',')[0].trim();
+                        nameInput.value = cityPart + " Facility";
+                    }
+                    map.setView([data.latitude, data.longitude], 14);
+                    setMarkerPosition(data.latitude, data.longitude, false);
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

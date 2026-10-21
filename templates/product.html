@@ -176,8 +176,15 @@
                 <strong>{{ listing.supplier.company_name }}</strong>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
-                <span style="color: var(--slate-500);">Facility Location</span>
-                <span>{{ listing.location }}</span>
+                <span style="color: var(--slate-500);">Supplier Pickup Godown</span>
+                <span style="text-align: right;">
+                    {% if listing.warehouse %}
+                        <strong>{{ listing.warehouse.location_name }}</strong><br>
+                        <span style="font-size: 0.75rem; color: var(--slate-500);">📍 {{ listing.warehouse.address }}</span>
+                    {% else %}
+                        <span>{{ listing.location }}</span>
+                    {% endif %}
+                </span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px dashed var(--slate-200);">
                 <span style="color: var(--slate-500);">Available Batch Volume</span>

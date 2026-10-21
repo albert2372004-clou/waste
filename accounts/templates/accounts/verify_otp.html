@@ -10,32 +10,119 @@
         <span class="status-pill ok" style="margin-bottom: 8px;">Step 2: Email Verification</span>
         <h1 style="font-size: var(--step-3); margin-top: 6px;">Enter 6-Digit OTP</h1>
         <p style="color: var(--slate-500); font-size: 0.85rem; margin-top: 8px; line-height: 1.5;">
-            We sent an email verification code to your registered corporate address. 
-            Enter the OTP below to confirm your contact and submit for Admin Verification.
+            We sent an email verification code to <strong>{{ pending_user.email }}</strong>. 
+            Enter the OTP below to complete registration and submit your company profile for Admin Review.
         </p>
 
-        {% if expected_otp %}
-        <div style="margin: 16px 0; background: #ecfdf5; border: 1px dashed #059669; border-radius: var(--radius); padding: 10px; font-size: 0.8rem; color: #065f46;">
-            <strong>MCA Project Evaluation Helper:</strong><br>
-            Your generated OTP is: <span class="mono" style="font-size: 1.1rem; font-weight: 700; letter-spacing: 2px;">{{ expected_otp }}</span>
+        <!-- Live Code Expiry Countdown Timer -->
+        <div style="margin: 18px 0 16px; padding: 10px; background: #f8fafc; border: 1px solid var(--slate-200); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span style="font-size: 0.85rem; color: var(--slate-600); font-weight: 500;">⏱️ Code expires in:</span>
+            <span id="countdown-timer" class="mono" style="font-weight: 700; font-size: 1.15rem; color: #dc2626; background: #fee2e2; padding: 2px 10px; border-radius: 6px;">
+                01:00
+            </span>
         </div>
-        {% endif %}
 
-        <form method="POST" style="margin-top: 20px;">
+        <div id="expired-notice" style="display: none; margin-bottom: 16px; padding: 10px; background: #fef2f2; border: 1px solid #f87171; border-radius: var(--radius); color: #991b1b; font-size: 0.82rem; text-align: center;">
+            ⚠️ <strong>Code Expired!</strong> Please click <em>Resend OTP Code</em> below.
+        </div>
+
+        <form method="POST" style="margin-top: 16px;">
             {% csrf_token %}
 
             <div style="margin-bottom: 20px;">
                 <input type="text" name="otp" required maxlength="6" pattern="[0-9]{6}" placeholder="• • • • • •" class="mono" style="width: 100%; max-width: 220px; padding: 12px; font-size: 1.5rem; letter-spacing: 8px; text-align: center; border: 2px solid var(--slate-300); border-radius: var(--radius);" autofocus autocomplete="one-time-code">
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block" style="padding: 12px; font-size: 0.92rem;">
-                Verify OTP &amp; Proceed &rarr;
+            <button type="submit" id="verify-btn" class="btn btn-primary btn-block" style="padding: 12px; font-size: 0.92rem;">
+                Verify OTP &amp; Complete Registration &rarr;
             </button>
         </form>
 
-        <div style="margin-top: 20px; font-size: 0.78rem; color: var(--slate-500);">
-            Didn't receive the email? Check your spam folder or re-register.
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--slate-200); font-size: 0.82rem; color: var(--slate-600);">
+            Didn't receive the email?
+
+            <div id="resend-container" style="margin-top: 10px;">
+                <!-- Dynamic countdown indicator while resend cooldown is active -->
+                <div id="resend-countdown-wrapper" style="display: none;">
+                    <span style="color: var(--slate-500); font-size: 0.82rem;">
+                        ⏳ Resend code available in <strong id="resend-cooldown-timer" class="mono" style="color: var(--slate-800); font-weight: 700; font-size: 0.95rem;">--s</strong>
+                    </span>
+                </div>
+
+                <!-- Clickable Resend Button when cooldown passes or timer expires -->
+                <div id="resend-button-wrapper" style="display: none;">
+                    <a href="{% url 'resend_otp' %}" id="resend-action-btn" class="btn btn-sm btn-outline" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; font-weight: 600; text-decoration: none; border-color: var(--emerald); color: var(--emerald-dark); background: var(--emerald-tint);">
+                        🔄 Resend OTP Code
+                    </a>
+                </div>
+            </div>
+
+            <div style="margin-top: 12px; font-size: 0.76rem; color: var(--slate-400);">
+                Please also check your spam/junk folder.
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+    (function() {
+        // Expiry Countdown
+        var timeLeft = parseInt("{{ remaining_seconds|default:60 }}", 10);
+        if (isNaN(timeLeft) || timeLeft < 0) timeLeft = 0;
+
+        var timerDisplay = document.getElementById('countdown-timer');
+        var verifyBtn = document.getElementById('verify-btn');
+        var expiredNotice = document.getElementById('expired-notice');
+
+        // Resend Cooldown Countdown
+        var resendWait = parseInt("{{ resend_wait_seconds|default:0 }}", 10);
+        if (isNaN(resendWait) || resendWait < 0) resendWait = 0;
+
+        var resendCountdownWrapper = document.getElementById('resend-countdown-wrapper');
+        var resendButtonWrapper = document.getElementById('resend-button-wrapper');
+        var resendTimer = document.getElementById('resend-cooldown-timer');
+
+        function updateExpiryUI() {
+            if (timeLeft <= 0) {
+                timerDisplay.innerText = "00:00 (Expired)";
+                timerDisplay.style.background = "#fee2e2";
+                timerDisplay.style.color = "#991b1b";
+                if (expiredNotice) expiredNotice.style.display = "block";
+                if (verifyBtn) {
+                    verifyBtn.disabled = true;
+                    verifyBtn.style.opacity = "0.55";
+                    verifyBtn.style.cursor = "not-allowed";
+                    verifyBtn.innerText = "Code Expired (Request New Code)";
+                }
+                if (resendCountdownWrapper) resendCountdownWrapper.style.display = 'none';
+                if (resendButtonWrapper) resendButtonWrapper.style.display = 'inline-block';
+                return;
+            }
+
+            var minutes = Math.floor(timeLeft / 60);
+            var seconds = timeLeft % 60;
+            var formatted = (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+            timerDisplay.innerText = formatted;
+            timeLeft--;
+            setTimeout(updateExpiryUI, 1000);
+        }
+
+        function updateResendUI() {
+            if (resendWait <= 0 || timeLeft <= 0) {
+                if (resendCountdownWrapper) resendCountdownWrapper.style.display = 'none';
+                if (resendButtonWrapper) resendButtonWrapper.style.display = 'inline-block';
+                return;
+            }
+
+            if (resendButtonWrapper) resendButtonWrapper.style.display = 'none';
+            if (resendCountdownWrapper) resendCountdownWrapper.style.display = 'block';
+            if (resendTimer) resendTimer.innerText = resendWait + "s";
+            resendWait--;
+            setTimeout(updateResendUI, 1000);
+        }
+
+        updateExpiryUI();
+        updateResendUI();
+    })();
+</script>
 {% endblock %}

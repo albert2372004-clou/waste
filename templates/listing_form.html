@@ -89,8 +89,25 @@
                         </button>
                     </div>
                     <div>
-                        <label style="display:block; font-weight:600; font-size:0.82rem; margin-bottom:6px;">Kerala Storage Facility / Hub *</label>
-                        {{ form.location }}
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <label style="font-weight:600; font-size:0.82rem; margin:0;">Dispatch Warehouse / Facility *</label>
+                            <a href="{% url 'location_create' %}?next={{ request.path }}" target="_blank" class="btn btn-outline btn-sm" style="font-size:0.7rem; padding:2px 8px;">
+                                + New Warehouse
+                            </a>
+                        </div>
+                        {% if warehouses %}
+                            <select name="warehouse" id="id_warehouse" class="form-control" required style="font-size: 0.85rem;">
+                                {% for wh in warehouses %}
+                                    <option value="{{ wh.id }}" data-address="{{ wh.address }}" {% if listing.warehouse_id == wh.id or forloop.first and not listing.warehouse_id %}selected{% endif %}>
+                                        {{ wh.location_name }} ({{ wh.get_location_type_display }}){% if wh.is_primary %} [Primary]{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="location" id="id_location" value="{{ form.location.value|default:'' }}" class="form-control" style="margin-top: 6px; font-size: 0.8rem; background: #f8fafc;" placeholder="Facility address...">
+                        {% else %}
+                            {{ form.location }}
+                        {% endif %}
+                        {% if form.warehouse.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.warehouse.errors }}</div>{% endif %}
                         {% if form.location.errors %}<div style="color:var(--danger); font-size:0.75rem; margin-top:3px;">{{ form.location.errors }}</div>{% endif %}
                     </div>
                 </div>
@@ -349,6 +366,17 @@
                 statusDiv.style.color = 'var(--danger)';
                 statusDiv.innerHTML = '⚠️ Error contacting certificate parsing engine.';
             });
+        });
+    }
+
+    const whSelect = document.getElementById('id_warehouse');
+    const locInput = document.getElementById('id_location');
+    if (whSelect && locInput) {
+        whSelect.addEventListener('change', function() {
+            const opt = whSelect.options[whSelect.selectedIndex];
+            if (opt && opt.dataset.address) {
+                locInput.value = opt.text.split('(')[0].trim() + ", " + opt.dataset.address;
+            }
         });
     }
 </script>
