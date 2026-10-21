@@ -7,9 +7,7 @@
      - Cart & Checkout (Delivery Godown & Custom Map Destination)
      ============================================================== -->
 
-<!-- Leaflet CSS & JS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 
 <style>
     /* Modal Container & Backdrop */
@@ -358,25 +356,17 @@
             zoomControl: true
         });
 
-        // Standard OpenStreetMap tile service with CARTO Voyager failover
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // 1. Define the correct OSM URL
+        const osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+        // 2. Define the mandatory attribution string
+        const osmAttribution = '&copy; <a href="https://openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+        // 3. Initialize the tile layer with a custom User-Agent in the options
+        L.tileLayer(osmUrl, {
             maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+            attribution: osmAttribution,
+            // Crucial fix: Identify your specific application to comply with the OSM policy
+            userAgent: 'CircularWasteManagementSystem/1.0 (albert2372004@gmail.com)' 
         }).addTo(map);
-
-        // Failover if any tile load error occurs
-        let modalFailedOver = false;
-        tileLayer.on('tileerror', function() {
-            if (!modalFailedOver) {
-                modalFailedOver = true;
-                map.removeLayer(tileLayer);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    subdomains: 'abcd',
-                    maxZoom: 20,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; CARTO'
-                }).addTo(map);
-            }
-        });
 
         // Click on map to place/move marker
         map.on('click', function(e) {
@@ -518,10 +508,23 @@
             });
     }
 
-    searchBtn.addEventListener('click', performSearch);
+    let modalSearchDebounce = null;
+    searchBtn.addEventListener('click', function() {
+        performSearch();
+    });
+    searchInput.addEventListener('input', function() {
+        clearTimeout(modalSearchDebounce);
+        const q = searchInput.value.trim();
+        if (q.length >= 3) {
+            modalSearchDebounce = setTimeout(performSearch, 350);
+        } else if (q.length === 0) {
+            searchResults.style.display = 'none';
+        }
+    });
     searchInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
+            clearTimeout(modalSearchDebounce);
             performSearch();
         }
     });

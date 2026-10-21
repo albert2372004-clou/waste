@@ -3,9 +3,7 @@
 {% block title %}{% if is_edit %}Edit Facility{% else %}Add New Facility / Godown{% endif %} — Circular Waste Platform{% endblock %}
 
 {% block content %}
-<!-- Leaflet CSS & JS for Visible Interactive Map -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 
 <div class="page-title-bar">
     <div class="wrap">
@@ -86,13 +84,35 @@
                     </span>
                 </div>
 
-                <!-- Quick Place Search -->
-                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                    <input type="text" id="godown-map-search-input" class="form-control" style="font-size: 0.85rem;" placeholder="Search town, district, or industrial corridor (e.g. Aluva, Palakkad, Eloor, Kalamassery)...">
-                    <button type="button" id="godown-map-search-btn" class="btn btn-primary btn-sm" style="white-space: nowrap; font-size: 0.82rem; padding: 6px 14px;">
-                        🔍 Find Location
-                    </button>
+                <!-- Quick Place Search with Recommendations Dropdown -->
+                <div style="position: relative; margin-bottom: 10px;" id="godown-search-wrapper">
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="godown-map-search-input" class="form-control" style="font-size: 0.85rem;" placeholder="Search town, district, or industrial corridor (e.g. Aluva, Palakkad, Eloor, Kalamassery)..." autocomplete="off">
+                        <button type="button" id="godown-map-search-btn" class="btn btn-primary btn-sm" style="white-space: nowrap; font-size: 0.82rem; padding: 6px 14px;">
+                            🔍 Find Location
+                        </button>
+                    </div>
+                    <div id="godown-map-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15); max-height: 220px; overflow-y: auto; z-index: 1000; margin-top: 4px;"></div>
                 </div>
+
+                <style>
+                    .godown-search-result-item {
+                        padding: 9px 12px;
+                        font-size: 0.84rem;
+                        border-bottom: 1px solid #f1f5f9;
+                        cursor: pointer;
+                        color: #334155;
+                        transition: background 0.15s;
+                        line-height: 1.35;
+                    }
+                    .godown-search-result-item:last-child {
+                        border-bottom: none;
+                    }
+                    .godown-search-result-item:hover {
+                        background: #f8fafc;
+                        color: #0f172a;
+                    }
+                </style>
 
                 <!-- Visible Map Container with Explicit Height and Width -->
                 <div id="godown-map-canvas" style="width: 100%; height: 380px; min-height: 380px; border-radius: 6px; border: 1px solid var(--slate-300); background: #e2e8f0; position: relative; z-index: 10; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
@@ -138,8 +158,15 @@ document.addEventListener("DOMContentLoaded", function() {
     const coordsBadge = document.getElementById("godown-map-coords-badge");
     const searchInput = document.getElementById("godown-map-search-input");
     const searchBtn = document.getElementById("godown-map-search-btn");
+    const searchResults = document.getElementById("godown-map-search-results");
     const resetBtn = document.getElementById("btn-reset-map-view");
     const pickBtn = document.getElementById("btn-pick-map");
+
+    if (nameInput) {
+        nameInput.addEventListener("input", function() {
+            nameInput.dataset.manualEdited = "true";
+        });
+    }
 
     if (typeof L === 'undefined') {
         console.error("Leaflet library not loaded.");
@@ -166,25 +193,17 @@ document.addEventListener("DOMContentLoaded", function() {
         scrollWheelZoom: true
     });
 
-    // Standard OpenStreetMap Tile Layer
-    const osmTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // 1. Define the correct OSM URL
+    const osmUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    // 2. Define the mandatory attribution string
+    const osmAttribution = '&copy; <a href="https://openstreetmap.org" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+    // 3. Initialize the tile layer with a custom User-Agent in the options
+    L.tileLayer(osmUrl, {
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+        attribution: osmAttribution,
+        // Crucial fix: Identify your specific application to comply with the OSM policy
+        userAgent: 'CircularWasteManagementSystem/1.0 (albert2372004@gmail.com)' 
     }).addTo(map);
-
-    // Failover if any tile load error occurs
-    let failedOver = false;
-    osmTileLayer.on('tileerror', function() {
-        if (!failedOver) {
-            failedOver = true;
-            map.removeLayer(osmTileLayer);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                subdomains: 'abcd',
-                maxZoom: 20,
-                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-            }).addTo(map);
-        }
-    });
 
     // Ensure map tiles render without grey backgrounds
     function refreshMapSize() {
@@ -193,8 +212,53 @@ document.addEventListener("DOMContentLoaded", function() {
     refreshMapSize();
     setTimeout(refreshMapSize, 100);
     setTimeout(refreshMapSize, 300);
+    setTimeout(refreshMapSize, 600);
+    window.addEventListener('resize', refreshMapSize);
 
     let marker = null;
+    let reverseTimeout = null;
+
+    // Debounced reverse geocoding via Nominatim with Photon fallback
+    // Always updates addressInput when pin is placed or moved
+    function reverseGeocode(lat, lng) {
+        clearTimeout(reverseTimeout);
+        reverseTimeout = setTimeout(function() {
+            const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`;
+            fetch(nomUrl, { headers: { 'Accept': 'application/json' } })
+                .then(r => {
+                    if (!r.ok) throw new Error("Nominatim HTTP " + r.status);
+                    return r.json();
+                })
+                .then(data => {
+                    if (data && data.display_name && addressInput) {
+                        addressInput.value = data.display_name;
+                        if (nameInput && !nameInput.dataset.manualEdited) {
+                            const firstPart = data.display_name.split(',')[0].trim();
+                            nameInput.value = `${firstPart} Facility`;
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Fallback to Photon reverse geocoding
+                    const photonUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`;
+                    fetch(photonUrl)
+                        .then(r => r.json())
+                        .then(pdata => {
+                            if (pdata && pdata.features && pdata.features.length > 0 && addressInput) {
+                                const p = pdata.features[0].properties;
+                                const parts = [p.name, p.street, p.city || p.district, p.state, p.country].filter(Boolean);
+                                const fullAddr = parts.join(", ");
+                                addressInput.value = fullAddr;
+                                if (nameInput && !nameInput.dataset.manualEdited) {
+                                    const firstPart = p.name || parts[0] || "Facility";
+                                    nameInput.value = `${firstPart} Facility`;
+                                }
+                            }
+                        })
+                        .catch(() => {});
+                });
+        }, 250);
+    }
 
     function setMarkerPosition(lat, lng, fetchAddress) {
         const fixedLat = parseFloat(Number(lat).toFixed(6));
@@ -219,31 +283,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         if (fetchAddress) {
-            // Reverse geocode via Nominatim with Photon fallback
-            const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${fixedLat}&lon=${fixedLng}&zoom=18&addressdetails=1`;
-            fetch(nomUrl, { headers: { 'Accept': 'application/json' } })
-                .then(r => r.json())
-                .then(data => {
-                    if (data && data.display_name && addressInput && !addressInput.value.trim()) {
-                        addressInput.value = data.display_name;
-                        if (nameInput && !nameInput.value.trim()) {
-                            const firstPart = data.display_name.split(',')[0].trim();
-                            nameInput.value = `${firstPart} Facility`;
-                        }
-                    }
-                })
-                .catch(() => {
-                    fetch(`https://photon.komoot.io/reverse?lat=${fixedLat}&lon=${fixedLng}`)
-                        .then(r => r.json())
-                        .then(pdata => {
-                            if (pdata && pdata.features && pdata.features.length > 0 && addressInput && !addressInput.value.trim()) {
-                                const p = pdata.features[0].properties;
-                                const parts = [p.name, p.street, p.city || p.district, p.state, p.country].filter(Boolean);
-                                addressInput.value = parts.join(", ");
-                            }
-                        })
-                        .catch(() => {});
-                });
+            reverseGeocode(fixedLat, fixedLng);
         }
     }
 
@@ -251,67 +291,152 @@ document.addEventListener("DOMContentLoaded", function() {
         setMarkerPosition(savedLat, savedLng, false);
     }
 
-    // Click anywhere on map to position pin
+    // Click anywhere on map to position pin and dynamically update address
     map.on('click', function(e) {
         setMarkerPosition(e.latlng.lat, e.latlng.lng, true);
     });
 
-    // Place search handler
-    function executeSearch() {
+    // Render search recommendations dropdown like the full map modal
+    function renderSearchResults(results) {
+        if (!searchResults) return;
+        searchResults.innerHTML = '';
+        if (!results || results.length === 0) {
+            searchResults.innerHTML = '<div class="godown-search-result-item" style="color:#94a3b8; cursor:default;">No matching locations found. Try searching another town or district, or click directly on the map.</div>';
+            searchResults.style.display = 'block';
+            return;
+        }
+        results.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'godown-search-result-item';
+            div.innerHTML = `<div style="font-weight:600; color:#0f172a;">📍 ${item.short_name}</div><div style="font-size:0.75rem; color:#64748b; margin-top:2px;">${item.display_name}</div>`;
+            div.addEventListener('click', function() {
+                const lat = parseFloat(item.lat);
+                const lon = parseFloat(item.lon);
+                map.setView([lat, lon], 14);
+                setMarkerPosition(lat, lon, false);
+                if (addressInput) addressInput.value = item.display_name;
+                if (nameInput && !nameInput.dataset.manualEdited) {
+                    nameInput.value = `${item.short_name} Facility`;
+                }
+                if (searchInput) searchInput.value = item.short_name;
+                searchResults.style.display = 'none';
+            });
+            searchResults.appendChild(div);
+        });
+        searchResults.style.display = 'block';
+    }
+
+    // Search via Nominatim with Photon fallback
+    let searchDebounceTimer = null;
+    function executeSearch(isAutoSuggest = false) {
         const query = searchInput ? searchInput.value.trim() : "";
-        if (!query) return;
+        if (!query) {
+            if (searchResults) searchResults.style.display = 'none';
+            return;
+        }
+        if (isAutoSuggest && query.length < 3) {
+            if (searchResults) searchResults.style.display = 'none';
+            return;
+        }
 
-        searchBtn.disabled = true;
-        searchBtn.textContent = "Searching...";
+        if (searchResults) {
+            searchResults.innerHTML = '<div class="godown-search-result-item" style="color:#64748b; cursor:default;">Searching OpenStreetMap recommendations...</div>';
+            searchResults.style.display = 'block';
+        }
+        if (searchBtn && !isAutoSuggest) {
+            searchBtn.disabled = true;
+            searchBtn.textContent = "Searching...";
+        }
 
-        const searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Kerala, India')}&limit=1`;
-        fetch(searchUrl)
-            .then(r => r.json())
+        const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=6`;
+        fetch(nomUrl, { headers: { 'Accept': 'application/json' } })
+            .then(r => {
+                if (!r.ok) throw new Error("Nominatim HTTP " + r.status);
+                return r.json();
+            })
             .then(results => {
-                searchBtn.disabled = false;
-                searchBtn.textContent = "🔍 Find Location";
+                if (searchBtn) {
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = "🔍 Find Location";
+                }
                 if (results && results.length > 0) {
-                    const lat = parseFloat(results[0].lat);
-                    const lon = parseFloat(results[0].lon);
-                    map.setView([lat, lon], 14);
-                    setMarkerPosition(lat, lon, false);
-                    if (addressInput && !addressInput.value.trim()) {
-                        addressInput.value = results[0].display_name;
-                    }
+                    const formatted = results.map(r => ({
+                        display_name: r.display_name,
+                        short_name: r.display_name.split(',')[0].trim(),
+                        lat: r.lat,
+                        lon: r.lon
+                    }));
+                    renderSearchResults(formatted);
                 } else {
-                    // Fallback to Photon
-                    fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query + ' Kerala')}&limit=1`)
-                        .then(r => r.json())
-                        .then(pdata => {
-                            if (pdata && pdata.features && pdata.features.length > 0) {
-                                const coords = pdata.features[0].geometry.coordinates;
-                                map.setView([coords[1], coords[0]], 14);
-                                setMarkerPosition(coords[1], coords[0], false);
-                            } else {
-                                alert(`Could not locate "${query}". Please click directly on the map to place your pin.`);
-                            }
-                        })
-                        .catch(() => {
-                            alert(`Could not locate "${query}". Please click directly on the map.`);
-                        });
+                    fallbackPhoton(query);
                 }
             })
             .catch(() => {
-                searchBtn.disabled = false;
-                searchBtn.textContent = "🔍 Find Location";
-                alert("Search service currently busy. You can click directly on the map to select your location.");
+                fallbackPhoton(query);
             });
     }
 
-    if (searchBtn) searchBtn.addEventListener('click', executeSearch);
+    function fallbackPhoton(query) {
+        fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6`)
+            .then(r => r.json())
+            .then(pdata => {
+                if (searchBtn) {
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = "🔍 Find Location";
+                }
+                if (pdata && pdata.features && pdata.features.length > 0) {
+                    const results = pdata.features.map(f => {
+                        const p = f.properties;
+                        const parts = [p.name, p.street, p.city || p.district, p.state].filter(Boolean);
+                        return {
+                            display_name: parts.join(", ") || p.name || query,
+                            short_name: p.name || parts[0] || query,
+                            lat: f.geometry.coordinates[1],
+                            lon: f.geometry.coordinates[0]
+                        };
+                    });
+                    renderSearchResults(results);
+                } else {
+                    renderSearchResults([]);
+                }
+            })
+            .catch(() => {
+                if (searchBtn) {
+                    searchBtn.disabled = false;
+                    searchBtn.textContent = "🔍 Find Location";
+                }
+                renderSearchResults([]);
+            });
+    }
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function() {
+            executeSearch(false);
+        });
+    }
+
     if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(function() {
+                executeSearch(true);
+            }, 350);
+        });
         searchInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                executeSearch();
+                clearTimeout(searchDebounceTimer);
+                executeSearch(false);
             }
         });
     }
+
+    // Close recommendations when clicking outside
+    document.addEventListener('click', function(e) {
+        if (searchResults && !e.target.closest('#godown-search-wrapper')) {
+            searchResults.style.display = 'none';
+        }
+    });
 
     if (resetBtn) {
         resetBtn.addEventListener('click', function() {
@@ -343,7 +468,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (latInput) latInput.value = data.latitude;
                     if (lngInput) lngInput.value = data.longitude;
                     if (addressInput) addressInput.value = data.address;
-                    if (nameInput && !nameInput.value.trim()) {
+                    if (nameInput && !nameInput.dataset.manualEdited) {
                         const cityPart = data.address.split(',')[0].trim();
                         nameInput.value = cityPart + " Facility";
                     }
